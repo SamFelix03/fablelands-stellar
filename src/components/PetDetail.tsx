@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useWallet } from '../hooks/useWallet'
 import { getPetInfo, feedPet, playWithPet, updatePetState } from '../services/petworldContract'
 import { PetChat } from './PetChat'
+import { Button } from './ui/button'
 
 interface PetDetailProps {
   tokenId: number
@@ -89,19 +90,19 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
 
   if (loading) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
-        <p>Loading pet information...</p>
+      <div className="p-10 text-center">
+        <p className="text-gray-700">Loading pet information...</p>
       </div>
     )
   }
 
   if (error && !petInfo) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
-        <p style={{ color: 'red' }}>{error}</p>
-        <button onClick={onBack} style={{ marginTop: '20px', padding: '10px 20px' }}>
-          Back to Pet List
-        </button>
+      <div className="p-10 text-center">
+        <p className="text-red-600 mb-5">{error}</p>
+        <Button onClick={onBack} variant="outline">
+          ← Back to Pet List
+        </Button>
       </div>
     )
   }
@@ -114,125 +115,81 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
   const stageColor = STAGE_COLORS[petInfo.evolutionStage] || '#e0e0e0'
 
   return (
-    <div style={{ padding: '20px' }}>
-      <button 
+    <div className="p-5">
+      <Button 
         onClick={onBack}
-        style={{ 
-          marginBottom: '20px', 
-          padding: '10px 20px',
-          background: '#f5f5f5',
-          border: 'none',
-          borderRadius: '8px',
-          cursor: 'pointer'
-        }}
+        variant="outline"
+        className="mb-5"
       >
         ← Back to Pet List
-      </button>
+      </Button>
 
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: '1fr 1fr', 
-        gap: '20px',
-        marginBottom: '20px'
-      }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
         {/* Left: Pet Info */}
-        <div style={{
-          background: 'white',
-          borderRadius: '16px',
-          padding: '24px',
-          border: `3px solid ${stageColor}`,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-        }}>
-          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-            <div style={{ fontSize: '80px', marginBottom: '16px' }}>
+        <div 
+          className="bg-white rounded-2xl p-6 shadow-lg"
+          style={{ border: `3px solid ${stageColor}` }}
+        >
+          <div className="text-center mb-6">
+            <div className="text-7xl mb-4">
               {stageEmoji}
             </div>
-            <h2 style={{ margin: '0 0 8px 0', fontSize: '28px' }}>{petInfo.name}</h2>
-            <div style={{
-              display: 'inline-block',
-              padding: '8px 16px',
-              borderRadius: '20px',
-              background: stageColor,
-              color: 'white',
-              fontWeight: '600',
-              fontSize: '14px'
-            }}>
+            <h2 className="m-0 mb-2 text-3xl font-bold">{petInfo.name}</h2>
+            <div 
+              className="inline-block px-4 py-2 rounded-full text-white font-semibold text-sm"
+              style={{ background: stageColor }}
+            >
               {EVOLUTION_STAGES[petInfo.evolutionStage]}
             </div>
           </div>
 
           {/* Stats */}
-          <div style={{ marginBottom: '24px' }}>
-            <h3 style={{ marginBottom: '16px', fontSize: '18px' }}>Stats</h3>
+          <div className="mb-6">
+            <h3 className="mb-4 text-lg font-semibold">Stats</h3>
             
-            <div style={{ marginBottom: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <div className="mb-3">
+              <div className="flex justify-between mb-1">
                 <span>Happiness</span>
-                <span style={{ fontWeight: '600' }}>{petInfo.happiness}/100</span>
+                <span className="font-semibold">{petInfo.happiness}/100</span>
               </div>
-              <div style={{
-                height: '12px',
-                background: '#e0e0e0',
-                borderRadius: '6px',
-                overflow: 'hidden'
-              }}>
-                <div style={{
-                  height: '100%',
-                  width: `${petInfo.happiness}%`,
-                  background: 'linear-gradient(90deg, #ffc107, #ffeb3b)',
-                  transition: 'width 0.5s ease'
-                }}></div>
+              <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-yellow-500 to-yellow-300 transition-all duration-500"
+                  style={{ width: `${petInfo.happiness}%` }}
+                ></div>
               </div>
             </div>
 
-            <div style={{ marginBottom: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <div className="mb-3">
+              <div className="flex justify-between mb-1">
                 <span>Hunger</span>
-                <span style={{ fontWeight: '600' }}>{petInfo.hunger}/100</span>
+                <span className="font-semibold">{petInfo.hunger}/100</span>
               </div>
-              <div style={{
-                height: '12px',
-                background: '#e0e0e0',
-                borderRadius: '6px',
-                overflow: 'hidden'
-              }}>
-                <div style={{
-                  height: '100%',
-                  width: `${petInfo.hunger}%`,
-                  background: 'linear-gradient(90deg, #ff5722, #ff8a65)',
-                  transition: 'width 0.5s ease'
-                }}></div>
+              <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-orange-600 to-orange-400 transition-all duration-500"
+                  style={{ width: `${petInfo.hunger}%` }}
+                ></div>
               </div>
             </div>
 
-            <div style={{ marginBottom: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <div className="mb-3">
+              <div className="flex justify-between mb-1">
                 <span>Health</span>
-                <span style={{ fontWeight: '600' }}>{petInfo.health}/100</span>
+                <span className="font-semibold">{petInfo.health}/100</span>
               </div>
-              <div style={{
-                height: '12px',
-                background: '#e0e0e0',
-                borderRadius: '6px',
-                overflow: 'hidden'
-              }}>
-                <div style={{
-                  height: '100%',
-                  width: `${petInfo.health}%`,
-                  background: 'linear-gradient(90deg, #e91e63, #f06292)',
-                  transition: 'width 0.5s ease'
-                }}></div>
+              <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-pink-600 to-pink-400 transition-all duration-500"
+                  style={{ width: `${petInfo.health}%` }}
+                ></div>
               </div>
             </div>
           </div>
 
           {/* Actions */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: '12px'
-          }}>
-            <button
+          <div className="grid grid-cols-2 gap-3">
+            <Button
               type="button"
               onClick={(e) => {
                 e.preventDefault()
@@ -240,21 +197,13 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
                 handleAction('feed')
               }}
               disabled={actionLoading !== null}
-              style={{
-                padding: '12px',
-                background: 'linear-gradient(135deg, #ff5722, #ff8a65)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                cursor: actionLoading ? 'not-allowed' : 'pointer',
-                opacity: actionLoading === 'feed' ? 0.6 : 1,
-                fontWeight: '600'
-              }}
+              className="bg-gradient-to-br from-orange-600 to-orange-400 text-white border-0"
+              style={{ opacity: actionLoading === 'feed' ? 0.6 : 1 }}
             >
               {actionLoading === 'feed' ? 'Feeding...' : '🍖 Feed'}
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="button"
               onClick={(e) => {
                 e.preventDefault()
@@ -262,21 +211,13 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
                 handleAction('play')
               }}
               disabled={actionLoading !== null}
-              style={{
-                padding: '12px',
-                background: 'linear-gradient(135deg, #ffc107, #ffeb3b)',
-                color: '#333',
-                border: 'none',
-                borderRadius: '12px',
-                cursor: actionLoading ? 'not-allowed' : 'pointer',
-                opacity: actionLoading === 'play' ? 0.6 : 1,
-                fontWeight: '600'
-              }}
+              className="bg-gradient-to-br from-yellow-500 to-yellow-300 text-gray-900 border-0"
+              style={{ opacity: actionLoading === 'play' ? 0.6 : 1 }}
             >
               {actionLoading === 'play' ? 'Playing...' : '🎮 Play'}
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="button"
               onClick={(e) => {
                 e.preventDefault()
@@ -284,31 +225,15 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
                 handleAction('update')
               }}
               disabled={actionLoading !== null}
-              style={{
-                padding: '12px',
-                background: 'linear-gradient(135deg, #2196f3, #64b5f6)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                cursor: actionLoading ? 'not-allowed' : 'pointer',
-                opacity: actionLoading === 'update' ? 0.6 : 1,
-                fontWeight: '600',
-                gridColumn: 'span 2'
-              }}
+              className="col-span-2 bg-gradient-to-br from-blue-500 to-blue-400 text-white border-0"
+              style={{ opacity: actionLoading === 'update' ? 0.6 : 1 }}
             >
               {actionLoading === 'update' ? 'Updating...' : '🔄 Update State'}
-            </button>
+            </Button>
           </div>
 
           {error && (
-            <div style={{
-              marginTop: '16px',
-              padding: '12px',
-              background: '#ffebee',
-              color: '#c62828',
-              borderRadius: '8px',
-              fontSize: '14px'
-            }}>
+            <div className="mt-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
               {error}
             </div>
           )}

@@ -1,35 +1,56 @@
-import React, { useState } from "react";
-import { Layout, Text } from "@stellar/design-system";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useWallet } from "../hooks/useWallet";
 import { PetList } from "../components/PetList";
 import { PetDetail } from "../components/PetDetail";
+import { WalletButton } from "../components/WalletButton";
 
 const Home: React.FC = () => {
   const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
+  const { address } = useWallet();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Redirect to landing if no wallet connected
+    if (!address) {
+      navigate("/");
+    }
+  }, [address, navigate]);
+
+  if (!address) {
+    return null; // Will redirect
+  }
 
   return (
-    <Layout.Content>
-      <Layout.Inset>
+    <main className="min-h-screen dotted-background">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1
+            className="text-5xl font-chango tracking-tight leading-none"
+            style={{
+              textShadow: "4px 4px 0px #FFD700",
+              letterSpacing: "1px",
+              color: "#000",
+            }}
+          >
+            🐾 PET WORLD
+          </h1>
+          <WalletButton />
+        </div>
+
         {selectedPetId === null ? (
-          <>
-            <Text as="h1" size="xl">
-              🐾 PetWorld
-            </Text>
-            <Text as="p" size="md" style={{ marginBottom: '32px' }}>
-              Your virtual pets on Stellar blockchain. Chat with them, feed them, and watch them evolve!
-            </Text>
-            <PetList 
-              onSelectPet={(tokenId) => setSelectedPetId(tokenId)}
-              selectedPetId={selectedPetId}
-            />
-          </>
+          <PetList 
+            onSelectPet={(tokenId) => setSelectedPetId(tokenId)}
+            selectedPetId={selectedPetId}
+          />
         ) : (
           <PetDetail 
             tokenId={selectedPetId}
             onBack={() => setSelectedPetId(null)}
           />
         )}
-      </Layout.Inset>
-    </Layout.Content>
+      </div>
+    </main>
   );
 };
 

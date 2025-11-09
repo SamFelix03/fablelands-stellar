@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useWallet } from '../hooks/useWallet'
 import { getUserPets, getPetInfo, mintPet } from '../services/petworldContract'
+import { Button } from './ui/button'
 
 interface PetListProps {
   onSelectPet: (tokenId: number) => void
@@ -114,77 +115,52 @@ export function PetList({ onSelectPet, selectedPetId }: PetListProps) {
 
   if (!address) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
-        <p>Please connect your wallet to view your pets</p>
+      <div className="p-10 text-center">
+        <p className="text-gray-700">Please connect your wallet to view your pets</p>
       </div>
     )
   }
 
   if (loading) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
-        <p>Loading your pets...</p>
+      <div className="p-10 text-center">
+        <p className="text-gray-700">Loading your pets...</p>
       </div>
     )
   }
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2 style={{ margin: 0, fontSize: '24px' }}>Your Pets</h2>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <button
+      <div className="flex justify-between items-center mb-5">
+        <h2 className="text-3xl font-bold m-0">Your Pets</h2>
+        <div className="flex gap-3 items-center">
+          <Button
             onClick={loadPets}
             disabled={loading}
-            style={{
-              padding: '8px 16px',
-              background: '#f5f5f5',
-              color: '#333',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              fontWeight: '600',
-              fontSize: '14px',
-              opacity: loading ? 0.6 : 1
-            }}
+            variant="outline"
+            size="sm"
             title="Refresh pet list"
           >
             🔄 {loading ? 'Loading...' : 'Refresh'}
-          </button>
+          </Button>
           {pets.length > 0 && (
-            <button
+            <Button
               onClick={() => setShowMintForm(!showMintForm)}
-              style={{
-                padding: '12px 24px',
-                background: showMintForm ? '#f5f5f5' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: showMintForm ? '#333' : 'white',
-                border: 'none',
-                borderRadius: '12px',
-                cursor: 'pointer',
-                fontWeight: '600',
-                fontSize: '16px',
-                transition: 'all 0.3s ease'
-              }}
+              variant={showMintForm ? "outline" : "default"}
+              size="default"
             >
               {showMintForm ? 'Cancel' : '+ Mint New Pet'}
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
       {showMintForm && (
-        <div style={{
-          background: 'white',
-          borderRadius: '16px',
-          padding: '24px',
-          marginBottom: '20px',
-          border: '2px solid #e0e0e0',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-        }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '20px' }}>Mint a New Pet</h3>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: '#555' }}>
+        <div className="bg-white rounded-2xl p-6 mb-5 border-2 border-gray-200 shadow-lg">
+          <h3 className="m-0 mb-4 text-xl font-bold">Mint a New Pet</h3>
+          <div className="flex gap-3 items-end">
+            <div className="flex-1">
+              <label className="block mb-2 text-sm font-semibold text-gray-600">
                 Pet Name (max 20 characters)
               </label>
               <input
@@ -197,54 +173,27 @@ export function PetList({ onSelectPet, selectedPetId }: PetListProps) {
                 placeholder="Enter pet name..."
                 maxLength={20}
                 disabled={minting}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: '2px solid #e0e0e0',
-                  borderRadius: '12px',
-                  fontSize: '16px',
-                  fontFamily: 'inherit'
-                }}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-base font-inherit focus:outline-none focus:border-primary"
                 onKeyPress={(e) => {
                   if (e.key === 'Enter' && !minting && petName.trim()) {
                     handleMint()
                   }
                 }}
               />
-              <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#999' }}>
+              <p className="mt-2 text-xs text-gray-500">
                 {petName.length}/20 characters
               </p>
             </div>
-            <button
+            <Button
               onClick={handleMint}
               disabled={!petName.trim() || minting || petName.trim().length === 0}
-              style={{
-                padding: '12px 24px',
-                background: minting || !petName.trim() 
-                  ? '#ccc' 
-                  : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                cursor: minting || !petName.trim() ? 'not-allowed' : 'pointer',
-                fontWeight: '600',
-                fontSize: '16px',
-                transition: 'all 0.3s ease',
-                whiteSpace: 'nowrap'
-              }}
+              size="default"
             >
               {minting ? 'Minting...' : '✨ Mint Pet'}
-            </button>
+            </Button>
           </div>
           {mintError && (
-            <div style={{
-              marginTop: '12px',
-              padding: '12px',
-              background: '#ffebee',
-              color: '#c62828',
-              borderRadius: '8px',
-              fontSize: '14px'
-            }}>
+            <div className="mt-3 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
               {mintError}
             </div>
           )}
@@ -252,73 +201,38 @@ export function PetList({ onSelectPet, selectedPetId }: PetListProps) {
       )}
 
       {pets.length === 0 && !showMintForm && (
-        <div style={{ padding: '40px', textAlign: 'center', background: 'white', borderRadius: '16px', border: '2px solid #e0e0e0' }}>
-          <div style={{ fontSize: '64px', marginBottom: '16px' }}>🥚</div>
-          <p style={{ fontSize: '18px', marginBottom: '8px', fontWeight: '600' }}>You don't have any pets yet!</p>
-          <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
+        <div className="p-10 text-center bg-white rounded-2xl border-2 border-gray-200">
+          <div className="text-6xl mb-4">🥚</div>
+          <p className="text-lg mb-2 font-semibold">You don't have any pets yet!</p>
+          <p className="text-sm text-gray-600 mb-5">
             Mint your first pet to get started
           </p>
-          <button
+          <Button
             onClick={() => setShowMintForm(true)}
-            style={{
-              padding: '12px 24px',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              cursor: 'pointer',
-              fontWeight: '600',
-              fontSize: '16px',
-              transition: 'all 0.3s ease',
-              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)'
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)'
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)'
-            }}
+            size="lg"
           >
             + Mint Your First Pet
-          </button>
+          </Button>
         </div>
       )}
 
       {pets.length > 0 && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-          gap: '16px'
-        }}>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
           {pets.map((pet) => (
             <div
               key={pet.tokenId}
               onClick={() => onSelectPet(pet.tokenId)}
-              style={{
-                background: 'white',
-                borderRadius: '16px',
-                padding: '20px',
-                border: selectedPetId === pet.tokenId ? '3px solid #667eea' : '2px solid #e0e0e0',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                textAlign: 'center'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)'
-                e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = 'none'
-              }}
+              className={`bg-white rounded-2xl p-5 cursor-pointer transition-all text-center ${
+                selectedPetId === pet.tokenId 
+                  ? 'border-4 border-primary shadow-lg' 
+                  : 'border-2 border-gray-200 hover:border-primary hover:shadow-lg hover:-translate-y-1'
+              }`}
             >
-              <div style={{ fontSize: '48px', marginBottom: '12px' }}>
+              <div className="text-5xl mb-3">
                 {EVOLUTION_STAGES[pet.stage] || '🥚'}
               </div>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '18px' }}>{pet.name}</h3>
-              <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>
+              <h3 className="m-0 mb-2 text-lg font-semibold">{pet.name}</h3>
+              <p className="m-0 text-sm text-gray-600">
                 ID: {pet.tokenId}
               </p>
             </div>
