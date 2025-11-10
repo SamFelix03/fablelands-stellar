@@ -1,5 +1,5 @@
 # FableLands
-Raise Your NFT Pets in the Stellar Blockchain!
+Feed It, Play With It, Talk To It. Your NFT just got a Soul!
 
 ## Important Links
 
