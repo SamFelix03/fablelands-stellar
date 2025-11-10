@@ -1,5 +1,5 @@
 [package]
-name = "petworld_achievement_express"
+name = "petworld_achievement_v2"
 version = "0.0.0"
 edition = "2021"
 publish = false

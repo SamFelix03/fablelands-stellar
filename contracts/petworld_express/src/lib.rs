@@ -64,10 +64,8 @@ impl PetWorld {
         env.storage().instance().set(&DataKey::NextTokenId, &1u128);
 
         // Set constants
-        // Hunger: +1 per 30 ledgers (~2.5 minutes per point, 0→100 in ~4.2 hours)
-        env.storage().instance().set(&DataKey::BlocksPerHungerPoint, &30u32);
-        // Happiness: -1 per 60 ledgers (~5 minutes per point, 100→0 in ~8.3 hours)
-        env.storage().instance().set(&DataKey::BlocksPerHappinessDecay, &60u32);
+        env.storage().instance().set(&DataKey::BlocksPerHungerPoint, &30u32);   // 2.5 minutes (30 ledgers * 5 sec = 150 sec)
+        env.storage().instance().set(&DataKey::BlocksPerHappinessDecay, &60u32); // 5 minutes (60 ledgers * 5 sec = 300 sec)
         env.storage().instance().set(&DataKey::FeedCost, &1000000000u64); // 0.001 XLM in stroops
         env.storage().instance().set(&DataKey::MintCost, &10000000000u64); // 0.01 XLM in stroops
         env.storage().instance().set(&DataKey::RevivalCost, &5000000000u64); // 0.005 XLM in stroops
@@ -174,11 +172,11 @@ impl PetWorld {
         let blocks_per_hunger: u32 = env.storage()
             .instance()
             .get(&DataKey::BlocksPerHungerPoint)
-            .unwrap_or(30);
+            .unwrap_or(500);
         let blocks_per_happiness: u32 = env.storage()
             .instance()
             .get(&DataKey::BlocksPerHappinessDecay)
-            .unwrap_or(60);
+            .unwrap_or(1000);
 
         // Calculate stat changes
         let hunger_increase = ledgers_passed / blocks_per_hunger;
