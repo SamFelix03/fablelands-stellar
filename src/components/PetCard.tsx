@@ -1,5 +1,4 @@
 import { cn } from '../lib/utils'
-import { PetAvatar } from './PetAvatar'
 
 interface PetCardProps {
   tokenId: number
@@ -8,13 +7,14 @@ interface PetCardProps {
   happiness: number
   hunger: number
   health: number
+  imageUrl?: string | null
   isSelected?: boolean
   onClick: () => void
 }
 
 const STAGE_COLORS = ['#e0e0e0', '#ffeb3b', '#ff9800', '#f44336']
 
-export function PetCard({ tokenId, name, stage, happiness, hunger, health, isSelected, onClick }: PetCardProps) {
+export function PetCard({ tokenId, name, stage, happiness, hunger, health, imageUrl, isSelected, onClick }: PetCardProps) {
   const stageColor = STAGE_COLORS[stage] || '#e0e0e0'
   
   // Ensure stats are valid numbers, default to 0 if not
@@ -37,7 +37,36 @@ export function PetCard({ tokenId, name, stage, happiness, hunger, health, isSel
       }}
     >
       <div className="mb-4 transform transition-transform hover:scale-110">
-        <PetAvatar evolutionStage={stage} size="lg" />
+        {imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== '' ? (
+          <div className="w-32 h-32 mx-auto flex items-center justify-center overflow-hidden rounded-lg border-2 border-black">
+            <img
+              src={imageUrl}
+              alt={name}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                console.error(`❌ Image failed to load for pet ${name}:`, imageUrl)
+                // If image fails, replace with placeholder
+                const container = e.currentTarget.parentElement
+                if (container) {
+                  container.innerHTML = `
+                    <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0)]">
+                      <span class="text-4xl">🐾</span>
+                    </div>
+                  `
+                }
+              }}
+              onLoad={() => {
+                console.log(`✅ Image loaded successfully for pet ${name}:`, imageUrl)
+              }}
+            />
+          </div>
+        ) : (
+          <div className="w-32 h-32 mx-auto flex items-center justify-center">
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0)]">
+              <span className="text-4xl">🐾</span>
+            </div>
+          </div>
+        )}
       </div>
       <h3 className="m-0 mb-2 text-2xl font-bold font-chango" style={{
         textShadow: "2px 2px 0px rgba(0,0,0,0.1)",

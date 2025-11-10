@@ -40,6 +40,33 @@ export default defineConfig(({ mode }) => {
           target: "http://localhost:8000/friendbot",
           changeOrigin: true,
         },
+        "/api/imagegen": {
+          target: "https://imagegen-739298578243.us-central1.run.app",
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/imagegen/, ""),
+        },
+        "/api/clipgen": {
+          target: "https://clipgen-739298578243.us-central1.run.app",
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/clipgen/, ""),
+        },
+        "/api/s3-proxy": {
+          target: "https://real-estate-brochures-tenori.s3.ap-south-1.amazonaws.com",
+          changeOrigin: true,
+          rewrite: (path) => {
+            // Extract the S3 path from the query parameter
+            try {
+              const url = new URL(path, 'http://localhost:5173')
+              const s3Path = url.searchParams.get('path')
+              if (s3Path) {
+                return decodeURIComponent(s3Path)
+              }
+            } catch (e) {
+              console.warn('Error parsing S3 proxy path:', e)
+            }
+            return path.replace(/^\/api\/s3-proxy/, "")
+          },
+        },
       },
     },
   };

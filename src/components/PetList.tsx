@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useWallet } from '../hooks/useWallet'
 import { getUserPets, getPetInfo } from '../services/petworldContract'
+import { getUserPets as getSupabasePets } from '../services/petService'
+import { useSupabaseUser } from '../hooks/useSupabaseUser'
 import { Button } from './ui/button'
 import { MintPetModal } from './MintPetModal'
 import { PetCard } from './PetCard'
@@ -12,6 +14,7 @@ interface PetListProps {
 
 export function PetList({ onSelectPet, selectedPetId }: PetListProps) {
   const { address } = useWallet()
+  const { user } = useSupabaseUser()
   const [pets, setPets] = useState<Array<{ 
     tokenId: number
     name: string
@@ -19,15 +22,16 @@ export function PetList({ onSelectPet, selectedPetId }: PetListProps) {
     happiness: number
     hunger: number
     health: number
+    imageUrl?: string | null
   }>>([])
   const [loading, setLoading] = useState(true)
   const [showMintModal, setShowMintModal] = useState(false)
 
   useEffect(() => {
-    if (address) {
+    if (address && user) {
       loadPets()
     }
-  }, [address])
+  }, [address, user])
 
   const loadPets = async () => {
     if (!address) return
@@ -45,6 +49,25 @@ export function PetList({ onSelectPet, selectedPetId }: PetListProps) {
         return
       }
       
+      // Get Supabase metadata for all pets
+      let supabasePets: Record<number, { pet_image_url: string | null }> = {}
+      if (user) {
+        try {
+          const supabasePetsList = await getSupabasePets(user.id)
+          console.log('📸 Supabase pets metadata:', supabasePetsList)
+          supabasePets = supabasePetsList.reduce((acc, pet) => {
+            acc[pet.pet_id] = { pet_image_url: pet.pet_image_url }
+            console.log(`📸 Pet ${pet.pet_id} image URL:`, pet.pet_image_url)
+            return acc
+          }, {} as Record<number, { pet_image_url: string | null }>)
+          console.log('📸 Supabase pets map:', supabasePets)
+        } catch (error) {
+          console.warn('Error loading Supabase pet metadata:', error)
+        }
+      } else {
+        console.warn('⚠️ No user found, cannot load Supabase metadata')
+      }
+
       // Load pet info for each pet
       const petsData = await Promise.all(
         petIds.map(async (tokenId) => {
@@ -56,6 +79,16 @@ export function PetList({ onSelectPet, selectedPetId }: PetListProps) {
               return null
             }
             
+            // Get image URL from Supabase metadata
+            const imageUrl = supabasePets[tokenId]?.pet_image_url || null
+            
+            console.log(`🔍 Pet ${tokenId} - Checking image URL:`)
+            console.log(`   Supabase map has pet ${tokenId}:`, tokenId in supabasePets)
+            console.log(`   Supabase data:`, supabasePets[tokenId])
+            console.log(`   Final imageUrl:`, imageUrl)
+            console.log(`   ImageUrl type:`, typeof imageUrl)
+            console.log(`   ImageUrl truthy:`, !!imageUrl)
+            
             // Ensure all required fields are present and valid
             const petData = {
               tokenId, 
@@ -64,9 +97,10 @@ export function PetList({ onSelectPet, selectedPetId }: PetListProps) {
               happiness: typeof info.happiness === 'number' && !isNaN(info.happiness) ? info.happiness : 0,
               hunger: typeof info.hunger === 'number' && !isNaN(info.hunger) ? info.hunger : 0,
               health: typeof info.health === 'number' && !isNaN(info.health) ? info.health : 0,
+              imageUrl: imageUrl || null, // Explicitly set to null if empty string
             }
             
-            console.log(`Pet ${tokenId} parsed data:`, petData)
+            console.log(`✅ Pet ${tokenId} parsed data:`, petData)
             return petData
           } catch (error) {
             console.error(`Error loading pet ${tokenId}:`, error)
@@ -78,6 +112,7 @@ export function PetList({ onSelectPet, selectedPetId }: PetListProps) {
               happiness: 0,
               hunger: 0,
               health: 0,
+              imageUrl: null,
             }
           }
         })
@@ -93,6 +128,7 @@ export function PetList({ onSelectPet, selectedPetId }: PetListProps) {
           happiness: typeof p!.happiness === 'number' && !isNaN(p!.happiness) ? p!.happiness : 0,
           hunger: typeof p!.hunger === 'number' && !isNaN(p!.hunger) ? p!.hunger : 0,
           health: typeof p!.health === 'number' && !isNaN(p!.health) ? p!.health : 0,
+          imageUrl: (p!.imageUrl && typeof p!.imageUrl === 'string' && p!.imageUrl.trim() !== '') ? p!.imageUrl : null,
         })) as Array<{ 
           tokenId: number
           name: string
@@ -100,6 +136,7 @@ export function PetList({ onSelectPet, selectedPetId }: PetListProps) {
           happiness: number
           hunger: number
           health: number
+          imageUrl?: string | null
         }>
       console.log('Valid pets with stats:', validPets)
       setPets(validPets)
@@ -179,6 +216,7 @@ export function PetList({ onSelectPet, selectedPetId }: PetListProps) {
               happiness={pet.happiness}
               hunger={pet.hunger}
               health={pet.health}
+              imageUrl={pet.imageUrl}
               isSelected={selectedPetId === pet.tokenId}
               onClick={() => onSelectPet(pet.tokenId)}
             />

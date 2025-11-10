@@ -423,15 +423,24 @@ export async function invokeContract(
     
     // Sign transaction using wallet
     const xdr = preparedTransaction.toXDR()
-    const signedResult = await signTransactionFn(xdr, {
-      address: userAddress,
-      networkPassphrase: networkPassphrase,
-    })
-    
-    if (!signedResult.signedTxXdr) {
+    let signedResult
+    try {
+      signedResult = await signTransactionFn(xdr, {
+        address: userAddress,
+        networkPassphrase: networkPassphrase,
+      })
+    } catch (error: any) {
+      // User rejected the transaction or signing failed
       return {
         success: false,
-        error: 'Transaction signing failed',
+        error: error.message || 'Transaction was rejected or signing failed',
+      }
+    }
+    
+    if (!signedResult || !signedResult.signedTxXdr) {
+      return {
+        success: false,
+        error: 'Transaction signing failed - no signed transaction returned',
       }
     }
     
@@ -440,7 +449,22 @@ export async function invokeContract(
       networkPassphrase
     )
     
-    const sendResponse = await server.sendTransaction(signedTx)
+    let sendResponse
+    try {
+      sendResponse = await server.sendTransaction(signedTx)
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to send transaction to network',
+      }
+    }
+    
+    if (!sendResponse || !sendResponse.hash) {
+      return {
+        success: false,
+        error: 'Transaction send failed - no hash returned',
+      }
+    }
     
     // Extract return value from simulation (for mint, this is the token ID)
     let returnValue: any = null
@@ -461,15 +485,25 @@ export async function invokeContract(
         if (txResponse.status === 'SUCCESS') {
           break
         } else if (txResponse.status === 'FAILED') {
+          // Try to get more details about the failure
+          const errorMessage = txResponse.resultXdr 
+            ? 'Transaction failed on-chain' 
+            : 'Transaction failed'
           return {
             success: false,
-            error: 'Transaction failed',
+            error: errorMessage,
           }
         }
         // Wait 1 second before next attempt
         await new Promise(resolve => setTimeout(resolve, 1000))
-      } catch (error) {
+      } catch (error: any) {
         // Transaction not found yet, wait and retry
+        if (attempts >= MAX_ATTEMPTS) {
+          return {
+            success: false,
+            error: `Transaction not found after ${MAX_ATTEMPTS} attempts: ${error.message || 'Unknown error'}`,
+          }
+        }
         await new Promise(resolve => setTimeout(resolve, 1000))
       }
     }
@@ -477,7 +511,9 @@ export async function invokeContract(
     if (!txResponse || txResponse.status !== 'SUCCESS') {
       return {
         success: false,
-        error: 'Transaction not confirmed in time',
+        error: txResponse?.status === 'FAILED' 
+          ? 'Transaction failed on-chain' 
+          : 'Transaction not confirmed in time',
       }
     }
     
@@ -550,32 +586,101 @@ export async function mintPet(
     
     const result = await invokeContract('mint', [callerAddr, nameVal], userAddress, signTransactionFn)
     
-    if (result.success && result.returnValue) {
-      // Extract token ID from return value (u128)
-      // The returnValue is an ScVal, we need to convert it to a number
+    if (result.success) {
+      // Extract token ID from return value (u128) if available
       let tokenId: number | undefined
       
-      try {
-        // Try to extract the u128 value from ScVal
-        // ScVal for u128 might be in different formats depending on SDK version
-        if (typeof result.returnValue === 'object') {
-          // Handle ScVal object - might have a 'u128' property or be a BigInt
-          if ('u128' in result.returnValue) {
-            tokenId = Number(result.returnValue.u128)
-          } else if (result.returnValue.toString) {
-            tokenId = Number(result.returnValue.toString())
-          } else if (result.returnValue.value !== undefined) {
-            tokenId = Number(result.returnValue.value)
+      if (result.returnValue) {
+        try {
+          console.log('Attempting to extract token ID from returnValue:', result.returnValue)
+          console.log('ReturnValue type:', typeof result.returnValue)
+          console.log('ReturnValue keys:', typeof result.returnValue === 'object' ? Object.keys(result.returnValue) : 'N/A')
+          
+          // Try to extract the u128 value from ScVal
+          // ScVal for u128 might be in different formats depending on SDK version
+          if (typeof result.returnValue === 'object' && result.returnValue !== null) {
+            // Handle ScVal object - might have a 'u128' property or be a BigInt
+            if ('u128' in result.returnValue) {
+              const u128Val = result.returnValue.u128
+              if (typeof u128Val === 'bigint') {
+                tokenId = Number(u128Val)
+              } else if (typeof u128Val === 'string') {
+                tokenId = Number(u128Val)
+              } else if (typeof u128Val === 'number') {
+                tokenId = u128Val
+              } else if (u128Val && typeof u128Val === 'object' && 'hi' in u128Val && 'lo' in u128Val) {
+                // Handle u128 as {hi: bigint, lo: bigint}
+                const hi = BigInt(u128Val.hi || 0)
+                const lo = BigInt(u128Val.lo || 0)
+                tokenId = Number(hi * BigInt(2**64) + lo)
+              }
+            } else if ('_arm' in result.returnValue && result.returnValue._arm === 'u128') {
+              // Handle ScVal with _arm: 'u128'
+              if (result.returnValue._value !== undefined) {
+                const val = result.returnValue._value
+                if (typeof val === 'bigint') {
+                  tokenId = Number(val)
+                } else if (typeof val === 'string') {
+                  tokenId = Number(val)
+                } else if (typeof val === 'number') {
+                  tokenId = val
+                } else if (val && typeof val === 'object' && 'hi' in val && 'lo' in val) {
+                  const hi = BigInt(val.hi || 0)
+                  const lo = BigInt(val.lo || 0)
+                  tokenId = Number(hi * BigInt(2**64) + lo)
+                }
+              }
+            } else if (result.returnValue.toString) {
+              const str = result.returnValue.toString()
+              tokenId = Number(str)
+            } else if (result.returnValue.value !== undefined) {
+              const val = result.returnValue.value
+              if (typeof val === 'bigint') {
+                tokenId = Number(val)
+              } else {
+                tokenId = Number(val)
+              }
+            } else if ('hi' in result.returnValue && 'lo' in result.returnValue) {
+              // Handle u128 as {hi: bigint, lo: bigint}
+              const hi = BigInt(result.returnValue.hi || 0)
+              const lo = BigInt(result.returnValue.lo || 0)
+              tokenId = Number(hi * BigInt(2**64) + lo)
+            }
+          } else if (typeof result.returnValue === 'bigint') {
+            tokenId = Number(result.returnValue)
+          } else if (typeof result.returnValue === 'number') {
+            tokenId = result.returnValue
+          } else if (typeof result.returnValue === 'string') {
+            tokenId = Number(result.returnValue)
           }
-        } else if (typeof result.returnValue === 'bigint') {
-          tokenId = Number(result.returnValue)
-        } else if (typeof result.returnValue === 'number') {
-          tokenId = result.returnValue
-        } else if (typeof result.returnValue === 'string') {
-          tokenId = Number(result.returnValue)
+          
+          // Validate tokenId
+          if (tokenId !== undefined && (isNaN(tokenId) || tokenId < 0)) {
+            console.warn('Extracted tokenId is invalid:', tokenId)
+            tokenId = undefined
+          }
+        } catch (e) {
+          console.warn('Could not extract token ID from return value:', e)
+          console.warn('ReturnValue:', result.returnValue)
         }
-      } catch (e) {
-        console.warn('Could not extract token ID from return value:', e)
+      }
+      
+      // If we couldn't extract tokenId, try to get it from the user's pets list
+      if (tokenId === undefined || isNaN(tokenId)) {
+        console.log('Token ID extraction failed, attempting to fetch from user pets...')
+        try {
+          // Wait a bit for the transaction to be indexed
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          const userPets = await getUserPets(userAddress)
+          if (userPets.length > 0) {
+            // Get the highest token ID (most recent mint)
+            const maxTokenId = Math.max(...userPets)
+            tokenId = maxTokenId
+            console.log('Found token ID from user pets:', tokenId)
+          }
+        } catch (e) {
+          console.warn('Could not fetch token ID from user pets:', e)
+        }
       }
       
       return {
@@ -585,7 +690,12 @@ export async function mintPet(
       }
     }
     
-    return result
+    // If not successful, ensure we have an error message
+    return {
+      success: false,
+      error: result.error || 'Minting failed - unknown error',
+      hash: result.hash,
+    }
   } catch (error: any) {
     console.error('Error minting pet:', error)
     return {

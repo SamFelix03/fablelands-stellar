@@ -6,6 +6,7 @@ import { supabase, type Pet } from '../lib/supabase'
 export interface PetMetadata {
   pet_id: number
   pet_name: string
+  creature_type?: 'dragon' | 'unicorn' | 'dino' | null
   pet_image_url?: string | null
   pet_sad_url?: string | null
   pet_happy_url?: string | null
@@ -26,6 +27,7 @@ export async function upsertPetMetadata(
         user_id: userId,
         pet_id: metadata.pet_id,
         pet_name: metadata.pet_name,
+        creature_type: metadata.creature_type || null,
         pet_image_url: metadata.pet_image_url || null,
         pet_sad_url: metadata.pet_sad_url || null,
         pet_happy_url: metadata.pet_happy_url || null,
