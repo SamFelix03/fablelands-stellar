@@ -55,7 +55,7 @@ What if your NFT could get hungry? What if it could feel lonely? What if it coul
 
 FableLands represents a paradigm shift in the NFT space, introducing truly autonomous on-chain companions that exist as living, breathing entities on the Stellar blockchain. Unlike traditional static NFTs, FableLands pets are dynamic digital beings that experience hunger, loneliness, and emotional states. They remember interactions, evolve over time, and engage in meaningful conversations through advanced AI integration.
 
-FableLands answers these questions by creating a Crypto-AI game that enables genuine, emotional bonds between users and their digital companions. Each pet is a unique NFT with its own personality, memory, and lifecycle, all managed entirely on-chain through Stellar smart contracts.
+FableLands is a Crypto-AI game that enables genuine, emotional bonds between users and their digital companions. Each pet is a unique NFT with its own personality, memory, and lifecycle, all managed entirely on-chain through Stellar smart contracts.
 
 ## What is a Pet?
 
