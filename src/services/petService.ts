@@ -7,6 +7,7 @@ export interface PetMetadata {
   pet_id: number
   pet_name: string
   creature_type?: 'dragon' | 'unicorn' | 'dino' | null
+  evolution_stage?: number | null // 0=Egg, 1=Baby, 2=Teen, 3=Adult
   pet_image_url?: string | null
   pet_sad_url?: string | null
   pet_happy_url?: string | null
@@ -28,6 +29,7 @@ export async function upsertPetMetadata(
         pet_id: metadata.pet_id,
         pet_name: metadata.pet_name,
         creature_type: metadata.creature_type || null,
+        evolution_stage: metadata.evolution_stage !== undefined ? metadata.evolution_stage : null,
         pet_image_url: metadata.pet_image_url || null,
         pet_sad_url: metadata.pet_sad_url || null,
         pet_happy_url: metadata.pet_happy_url || null,

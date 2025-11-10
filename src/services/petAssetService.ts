@@ -94,6 +94,7 @@ export async function generatePetAssets(
       pet_id: tokenId,
       pet_name: petName,
       creature_type: creatureType,
+      evolution_stage: evolutionStage,
       pet_image_url: imageUrl,
       pet_happy_url: videos.happy,
       pet_sad_url: videos.sad,

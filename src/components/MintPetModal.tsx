@@ -49,9 +49,14 @@ export function MintPetModal({ open, onOpenChange, onMintSuccess }: MintPetModal
       const result = await mintPet(petName.trim(), address, signTransaction)
 
       if (result.success && result.tokenId && !isNaN(result.tokenId)) {
-        setMinting(false) // Close mint modal
+        setMinting(false)
         setMintedTokenId(result.tokenId)
-        setShowBirthModal(true) // Show birth modal
+        // Close the mint modal immediately
+        onOpenChange(false)
+        // Show birth modal after a brief delay to ensure mint modal closes first
+        setTimeout(() => {
+          setShowBirthModal(true)
+        }, 100)
         
         console.log('Mint successful! Hash:', result.hash, 'Token ID:', result.tokenId)
         

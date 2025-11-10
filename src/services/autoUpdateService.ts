@@ -10,7 +10,7 @@ import { getPetInfo } from './petworldContract'
 
 // Get contract address from environment
 const getContractAddress = () => {
-  return import.meta.env?.PUBLIC_PETWORLD_CONTRACT || 'CBDGYGMN4MJOTMGBGPY6VF2JCIDBYUFKPWB4ZDP2AGRV7BFOFWYPATKT'
+  return import.meta.env?.PUBLIC_PETWORLD_CONTRACT || 'CCS7FD7WUCYW6RAHYBUYO6NPXBDZHFLSUA4SNBASMXJNQUCB4JOEH3TQ'
 }
 
 const PETWORLD_CONTRACT = getContractAddress()

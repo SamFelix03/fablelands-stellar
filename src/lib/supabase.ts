@@ -27,6 +27,7 @@ export interface Pet {
   pet_id: number // Token ID from contract
   pet_name: string
   creature_type: 'dragon' | 'unicorn' | 'dino' | null
+  evolution_stage: number | null // 0=Egg, 1=Baby, 2=Teen, 3=Adult
   pet_image_url: string | null
   pet_sad_url: string | null
   pet_happy_url: string | null

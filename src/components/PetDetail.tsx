@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useWallet } from '../hooks/useWallet'
 import { getPetInfo, feedPet, playWithPet, updatePetState } from '../services/petworldContract'
 import { generatePetAssets } from '../services/petAssetService'
-import { getPetMetadata } from '../services/petService'
+import { getPetMetadata, updatePetMetadata } from '../services/petService'
 import { useSupabaseUser } from '../hooks/useSupabaseUser'
 import type { CreatureType } from './MintPetModal'
 import { PetChat } from './PetChat'
@@ -15,6 +15,7 @@ import { TicTacToe } from './TicTacToe'
 import { RockPaperScissors } from './RockPaperScissors'
 import { PetTimeline } from './PetTimeline'
 import { PetEvolutionModal } from './PetEvolutionModal'
+import { PetAchievementsModal } from './PetAchievementsModal'
 import { logFeed, logPlay, logEvolution, logUpdateState, logBirth, getPetHistory } from '../services/petHistory'
 import {
   Dialog,
@@ -42,6 +43,7 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
   const [chatOpen, setChatOpen] = useState(false)
   const [activeGame, setActiveGame] = useState<'selection' | 'memory' | 'tictactoe' | 'rps' | null>(null)
   const [showTimeline, setShowTimeline] = useState(false)
+  const [showAchievements, setShowAchievements] = useState(false)
   const [showEvolutionModal, setShowEvolutionModal] = useState(false)
   const [evolutionProgress, setEvolutionProgress] = useState({ message: 'Your pet is evolving...', progress: 0 })
   const [evolvingFromStage, setEvolvingFromStage] = useState<number | null>(null)
@@ -63,7 +65,8 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
       setLoading(true)
       const info = await getPetInfo(tokenId, address)
       if (info) {
-        // Get creature type and media URLs from Supabase metadata
+        // Get creature type, media URLs, and evolution stage from Supabase metadata
+        let storedEvolutionStage: number | null = null
         if (user) {
           const metadata = await getPetMetadata(user.id, tokenId)
           if (metadata) {
@@ -73,6 +76,9 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
               // Default to dragon if not found (for older pets)
               setCreatureType('dragon')
             }
+            
+            // Get stored evolution stage
+            storedEvolutionStage = metadata.evolution_stage ?? null
             
             // Store media URLs
             setPetMetadata({
@@ -86,8 +92,10 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
           } else {
             setCreatureType('dragon')
             setPetMetadata(null)
+            storedEvolutionStage = null
           }
         }
+        
         // Log birth if this is the first time loading this pet
         if (!birthLoggedRef.current) {
           const history = getPetHistory(tokenId)
@@ -97,10 +105,15 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
           }
         }
 
-        // Check for evolution
-        if (previousStageRef.current !== null && previousStageRef.current !== info.evolutionStage) {
-          const fromStage = previousStageRef.current
-          const toStage = info.evolutionStage
+        // Check for evolution by comparing contract stage with Supabase stored stage
+        const contractEvolutionStage = info.evolutionStage
+        const hasEvolved = storedEvolutionStage !== null && contractEvolutionStage > storedEvolutionStage
+
+        if (hasEvolved && !evolutionInProgressRef.current && address && user && storedEvolutionStage !== null) {
+          const fromStage = storedEvolutionStage
+          const toStage = contractEvolutionStage
+          
+          console.log(`Evolution detected: Stage ${fromStage} -> ${toStage}`)
           
           logEvolution(
             tokenId,
@@ -111,59 +124,72 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
           )
 
           // Trigger asset regeneration for evolved stage
-          if (!evolutionInProgressRef.current && address) {
-            evolutionInProgressRef.current = true
-            setEvolvingFromStage(fromStage)
-            setShowEvolutionModal(true)
-            
-            // Generate new assets for evolved stage
-            generatePetAssets({
-              walletAddress: address,
-              tokenId,
-              petName: info.name,
-              creatureType: creatureType, // Use the stored creature type
-              evolutionStage: toStage,
-              happiness: info.happiness,
-              hunger: info.hunger,
-              health: info.health,
-              onProgress: (message, progress) => {
-                setEvolutionProgress({
-                  message,
-                  progress: progress || 0,
-                })
-              },
-            })
-              .then((result) => {
-                if (result.success) {
-                  setEvolutionProgress({
-                    message: 'Evolution complete!',
-                    progress: 100,
-                  })
-                  // Close modal after a short delay
-                  setTimeout(() => {
-                    setShowEvolutionModal(false)
-                    evolutionInProgressRef.current = false
-                    setEvolutionProgress({ message: 'Your pet is evolving...', progress: 0 })
-                  }, 1500)
-                } else {
-                  setEvolutionProgress({
-                    message: `Error: ${result.error || 'Failed to generate assets'}`,
-                    progress: 0,
-                  })
-                  evolutionInProgressRef.current = false
-                }
+          evolutionInProgressRef.current = true
+          setEvolvingFromStage(fromStage)
+          setShowEvolutionModal(true)
+          
+          // Generate new assets for evolved stage
+          generatePetAssets({
+            walletAddress: address,
+            tokenId,
+            petName: info.name,
+            creatureType: creatureType, // Use the stored creature type
+            evolutionStage: toStage,
+            happiness: info.happiness,
+            hunger: info.hunger,
+            health: info.health,
+            onProgress: (message, progress) => {
+              setEvolutionProgress({
+                message,
+                progress: progress || 0,
               })
-              .catch((error) => {
-                console.error('Error generating evolution assets:', error)
+            },
+          })
+            .then(async (result) => {
+              if (result.success) {
                 setEvolutionProgress({
-                  message: `Error: ${error.message || 'Failed to generate assets'}`,
+                  message: 'Evolution complete!',
+                  progress: 100,
+                })
+                // Update Supabase with new evolution stage
+                if (user) {
+                  await updatePetMetadata(user.id, tokenId, {
+                    evolution_stage: toStage,
+                  })
+                }
+                // Close modal after a short delay
+                setTimeout(() => {
+                  setShowEvolutionModal(false)
+                  evolutionInProgressRef.current = false
+                  setEvolutionProgress({ message: 'Your pet is evolving...', progress: 0 })
+                }, 1500)
+              } else {
+                setEvolutionProgress({
+                  message: `Error: ${result.error || 'Failed to generate assets'}`,
                   progress: 0,
                 })
                 evolutionInProgressRef.current = false
+              }
+            })
+            .catch((error) => {
+              console.error('Error generating evolution assets:', error)
+              setEvolutionProgress({
+                message: `Error: ${error.message || 'Failed to generate assets'}`,
+                progress: 0,
               })
-          }
+              evolutionInProgressRef.current = false
+            })
         }
-        previousStageRef.current = info.evolutionStage
+
+        // Always update Supabase with current evolution stage (if user exists)
+        if (user && contractEvolutionStage !== storedEvolutionStage) {
+          await updatePetMetadata(user.id, tokenId, {
+            evolution_stage: contractEvolutionStage,
+          })
+        }
+
+        // Update previousStageRef for local tracking
+        previousStageRef.current = contractEvolutionStage
 
         setPetInfo(info)
         setError(null)
@@ -175,7 +201,7 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
     } finally {
       setLoading(false)
     }
-  }, [tokenId, address, user])
+  }, [tokenId, address, user, creatureType])
 
   useEffect(() => {
     if (address) {
@@ -310,6 +336,13 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
           className="font-fredoka"
         >
           📜 View Timeline
+        </Button>
+        <Button 
+          onClick={() => setShowAchievements(true)}
+          variant="default"
+          className="font-fredoka"
+        >
+          🏆 Achievements
         </Button>
       </div>
 
@@ -497,6 +530,16 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
               tokenId={tokenId}
               petName={petInfo.name}
               onClose={() => setShowTimeline(false)}
+            />
+          )}
+
+          {/* Achievements Modal */}
+          {petInfo && (
+            <PetAchievementsModal
+              petId={tokenId}
+              petName={petInfo.name}
+              open={showAchievements}
+              onOpenChange={setShowAchievements}
             />
           )}
 
