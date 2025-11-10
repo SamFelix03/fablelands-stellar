@@ -10,6 +10,7 @@ export interface PetContext {
   age: number
   interaction: 'feed' | 'play' | 'greet' | 'evolve' | 'chat'
   userMessage?: string
+  tokenId?: number // Optional tokenId for better context tracking
 }
 
 const STAGE_NAMES = ['Egg', 'Baby', 'Teen', 'Adult']
@@ -25,12 +26,29 @@ const PERSONALITY_PROMPTS = {
 }
 
 function buildPrompt(context: PetContext): string {
-  const { name, evolutionStage, happiness, hunger, health, interaction, userMessage } = context
+  const { name, evolutionStage, happiness, hunger, health, interaction, userMessage, tokenId } = context
   const stage = STAGE_NAMES[evolutionStage]
   const personalityBase = PERSONALITY_PROMPTS[evolutionStage as keyof typeof PERSONALITY_PROMPTS]
 
   // Check if a game was recently played
   const lastGame = localStorage.getItem('lastGameWon') || null
+  
+  // Check for last action (feed/play/update) - use tokenId if available
+  let lastAction: string | null = null
+  if (tokenId !== undefined) {
+    lastAction = localStorage.getItem(`lastAction_${tokenId}`)
+  } else {
+    // Fallback: try to get last action for any pet
+    try {
+      const keys = Object.keys(localStorage)
+      const actionKeys = keys.filter(k => k.startsWith('lastAction_'))
+      if (actionKeys.length > 0) {
+        lastAction = localStorage.getItem(actionKeys[actionKeys.length - 1])
+      }
+    } catch (e) {
+      // Ignore errors
+    }
+  }
   
   let situationContext = ''
   
@@ -73,7 +91,35 @@ function buildPrompt(context: PetContext): string {
       interactionContext = `You just evolved from ${STAGE_NAMES[evolutionStage - 1]} to ${stage}! Express your excitement and transformation. This is a HUGE moment! `
       break
     case 'chat':
-      interactionContext = `Your trainer said: "${userMessage}". Respond naturally to what they said. `
+      // Include context about recent actions if available
+      let recentActionContext = ''
+      if (lastAction === 'feed') {
+        recentActionContext = 'Your trainer just fed you a moment ago. '
+        // Clear the action after using it (so it doesn't persist)
+        if (tokenId !== undefined) {
+          localStorage.removeItem(`lastAction_${tokenId}`)
+        }
+      } else if (lastAction === 'play') {
+        if (lastGame) {
+          recentActionContext = `Your trainer just played a game of **${lastGame}** with you! `
+          // Clear game context after using it
+          localStorage.removeItem('lastGameWon')
+        } else {
+          recentActionContext = 'Your trainer just played with you a moment ago. '
+        }
+        // Clear the action after using it
+        if (tokenId !== undefined) {
+          localStorage.removeItem(`lastAction_${tokenId}`)
+        }
+      } else if (lastAction === 'update') {
+        recentActionContext = 'Your state was just refreshed. '
+        // Clear the action after using it
+        if (tokenId !== undefined) {
+          localStorage.removeItem(`lastAction_${tokenId}`)
+        }
+      }
+      
+      interactionContext = `${recentActionContext}Your trainer said: "${userMessage}". Respond naturally to what they said, and acknowledge any recent care they gave you if relevant. `
       break
   }
 

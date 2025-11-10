@@ -5,14 +5,22 @@ interface PetCardProps {
   tokenId: number
   name: string
   stage: number
+  happiness: number
+  hunger: number
+  health: number
   isSelected?: boolean
   onClick: () => void
 }
 
 const STAGE_COLORS = ['#e0e0e0', '#ffeb3b', '#ff9800', '#f44336']
 
-export function PetCard({ tokenId, name, stage, isSelected, onClick }: PetCardProps) {
+export function PetCard({ tokenId, name, stage, happiness, hunger, health, isSelected, onClick }: PetCardProps) {
   const stageColor = STAGE_COLORS[stage] || '#e0e0e0'
+  
+  // Ensure stats are valid numbers, default to 0 if not
+  const safeHappiness = typeof happiness === 'number' && !isNaN(happiness) ? Math.max(0, Math.min(100, happiness)) : 0
+  const safeHunger = typeof hunger === 'number' && !isNaN(hunger) ? Math.max(0, Math.min(100, hunger)) : 0
+  const safeHealth = typeof health === 'number' && !isNaN(health) ? Math.max(0, Math.min(100, health)) : 0
 
   return (
     <div
@@ -37,11 +45,48 @@ export function PetCard({ tokenId, name, stage, isSelected, onClick }: PetCardPr
         {name}
       </h3>
       <div 
-        className="inline-block px-3 py-1 rounded-lg text-white font-semibold text-xs mb-2"
+        className="inline-block px-3 py-1 rounded-lg text-white font-semibold text-xs mb-3"
         style={{ background: stageColor }}
       >
         Stage {stage}
       </div>
+
+      {/* Stats */}
+      <div className="w-full space-y-2 mb-3">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-bold font-fredoka text-gray-700">Happiness</span>
+          <span className="font-black font-fredoka">{safeHappiness}/100</span>
+        </div>
+        <div className="h-2 bg-gray-200 rounded-full overflow-hidden border-2 border-black">
+          <div 
+            className="h-full bg-gradient-to-r from-yellow-500 to-yellow-300 transition-all duration-300"
+            style={{ width: `${safeHappiness}%` }}
+          />
+        </div>
+
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-bold font-fredoka text-gray-700">Hunger</span>
+          <span className="font-black font-fredoka">{safeHunger}/100</span>
+        </div>
+        <div className="h-2 bg-gray-200 rounded-full overflow-hidden border-2 border-black">
+          <div 
+            className="h-full bg-gradient-to-r from-orange-600 to-orange-400 transition-all duration-300"
+            style={{ width: `${safeHunger}%` }}
+          />
+        </div>
+
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-bold font-fredoka text-gray-700">Health</span>
+          <span className="font-black font-fredoka">{safeHealth}/100</span>
+        </div>
+        <div className="h-2 bg-gray-200 rounded-full overflow-hidden border-2 border-black">
+          <div 
+            className="h-full bg-gradient-to-r from-pink-600 to-pink-400 transition-all duration-300"
+            style={{ width: `${safeHealth}%` }}
+          />
+        </div>
+      </div>
+
       <p className="m-0 text-sm text-gray-500 font-mono">
         #{tokenId}
       </p>

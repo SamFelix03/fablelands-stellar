@@ -12,7 +12,14 @@ interface PetListProps {
 
 export function PetList({ onSelectPet, selectedPetId }: PetListProps) {
   const { address } = useWallet()
-  const [pets, setPets] = useState<Array<{ tokenId: number; name: string; stage: number }>>([])
+  const [pets, setPets] = useState<Array<{ 
+    tokenId: number
+    name: string
+    stage: number
+    happiness: number
+    hunger: number
+    health: number
+  }>>([])
   const [loading, setLoading] = useState(true)
   const [showMintModal, setShowMintModal] = useState(false)
 
@@ -44,16 +51,57 @@ export function PetList({ onSelectPet, selectedPetId }: PetListProps) {
           try {
             const info = await getPetInfo(tokenId, address)
             console.log(`Pet ${tokenId} info:`, info)
-            return info ? { tokenId, name: info.name, stage: info.evolutionStage } : null
+            if (!info) {
+              console.warn(`No info returned for pet ${tokenId}`)
+              return null
+            }
+            
+            // Ensure all required fields are present and valid
+            const petData = {
+              tokenId, 
+              name: info.name || `Pet #${tokenId}`, 
+              stage: typeof info.evolutionStage === 'number' ? info.evolutionStage : 0,
+              happiness: typeof info.happiness === 'number' && !isNaN(info.happiness) ? info.happiness : 0,
+              hunger: typeof info.hunger === 'number' && !isNaN(info.hunger) ? info.hunger : 0,
+              health: typeof info.health === 'number' && !isNaN(info.health) ? info.health : 0,
+            }
+            
+            console.log(`Pet ${tokenId} parsed data:`, petData)
+            return petData
           } catch (error) {
             console.error(`Error loading pet ${tokenId}:`, error)
-            return null
+            // Return a pet with default values instead of null
+            return {
+              tokenId,
+              name: `Pet #${tokenId}`,
+              stage: 0,
+              happiness: 0,
+              hunger: 0,
+              health: 0,
+            }
           }
         })
       )
 
-      const validPets = petsData.filter(p => p !== null) as Array<{ tokenId: number; name: string; stage: number }>
-      console.log('Valid pets:', validPets)
+      // Filter out null values and ensure all pets have valid data
+      const validPets = petsData
+        .filter(p => p !== null)
+        .map(p => ({
+          tokenId: p!.tokenId,
+          name: p!.name || `Pet #${p!.tokenId}`,
+          stage: typeof p!.stage === 'number' ? p!.stage : 0,
+          happiness: typeof p!.happiness === 'number' && !isNaN(p!.happiness) ? p!.happiness : 0,
+          hunger: typeof p!.hunger === 'number' && !isNaN(p!.hunger) ? p!.hunger : 0,
+          health: typeof p!.health === 'number' && !isNaN(p!.health) ? p!.health : 0,
+        })) as Array<{ 
+          tokenId: number
+          name: string
+          stage: number
+          happiness: number
+          hunger: number
+          health: number
+        }>
+      console.log('Valid pets with stats:', validPets)
       setPets(validPets)
     } catch (error) {
       console.error('Error loading pets:', error)
@@ -128,6 +176,9 @@ export function PetList({ onSelectPet, selectedPetId }: PetListProps) {
               tokenId={pet.tokenId}
               name={pet.name}
               stage={pet.stage}
+              happiness={pet.happiness}
+              hunger={pet.hunger}
+              health={pet.health}
               isSelected={selectedPetId === pet.tokenId}
               onClick={() => onSelectPet(pet.tokenId)}
             />

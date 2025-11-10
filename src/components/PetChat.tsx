@@ -16,13 +16,13 @@ interface PetChatProps {
   hunger: number
   health: number
   age: number
+  tokenId?: number
 }
 
-function PetChatComponent({ petName, evolutionStage, happiness, hunger, health, age }: PetChatProps) {
+function PetChatComponent({ petName, evolutionStage, happiness, hunger, health, age, tokenId }: PetChatProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [hasGreeted, setHasGreeted] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messageIdCounter = useRef(0)
 
@@ -42,13 +42,20 @@ function PetChatComponent({ petName, evolutionStage, happiness, hunger, health, 
     }
   }, [messages])
 
-  // Send greeting when component mounts (only once)
+  // Send greeting when component mounts (only once per pet)
+  // Use a ref to track if we've already greeted for this pet
+  const greetingSentRef = useRef<string>('')
+  const currentPetKey = `${petName}-${evolutionStage}`
+  
   useEffect(() => {
-    if (hasGreeted) return
+    // Only send greeting if we haven't greeted this pet yet AND we have no messages
+    if (greetingSentRef.current === currentPetKey || messages.length > 0) {
+      return
+    }
     
     const handleGreeting = async () => {
       setIsLoading(true)
-      setHasGreeted(true)
+      greetingSentRef.current = currentPetKey
       const context: PetContext = {
         name: petName,
         evolutionStage,
@@ -57,6 +64,7 @@ function PetChatComponent({ petName, evolutionStage, happiness, hunger, health, 
         health,
         age,
         interaction: 'greet',
+        tokenId,
       }
 
       try {
@@ -72,7 +80,7 @@ function PetChatComponent({ petName, evolutionStage, happiness, hunger, health, 
     
     handleGreeting()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [currentPetKey]) // Only reset when pet name or stage changes
 
   const addMessage = (text: string, sender: 'user' | 'pet') => {
     // Use counter + timestamp to ensure unique IDs
@@ -104,6 +112,7 @@ function PetChatComponent({ petName, evolutionStage, happiness, hunger, health, 
       age,
       interaction: 'chat',
       userMessage,
+      tokenId,
     }
 
     const response = await getPetResponse(context)
@@ -173,7 +182,8 @@ export const PetChat = memo(PetChatComponent, (prevProps, nextProps) => {
   // We only care about name and evolution stage - ignore stat changes
   const propsEqual = (
     prevProps.petName === nextProps.petName &&
-    prevProps.evolutionStage === nextProps.evolutionStage
+    prevProps.evolutionStage === nextProps.evolutionStage &&
+    prevProps.tokenId === nextProps.tokenId
   )
   return propsEqual // true = skip re-render, false = re-render
 })

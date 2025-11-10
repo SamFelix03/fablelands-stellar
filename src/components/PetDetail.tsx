@@ -1,10 +1,16 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useWallet } from '../hooks/useWallet'
 import { getPetInfo, feedPet, playWithPet, updatePetState } from '../services/petworldContract'
 import { PetChat } from './PetChat'
 import { Button } from './ui/button'
 import { StatBar } from './StatBar'
 import { PetAvatar } from './PetAvatar'
+import { GameSelectionModal } from './GameSelectionModal'
+import { MemoryGame } from './MemoryGame'
+import { TicTacToe } from './TicTacToe'
+import { RockPaperScissors } from './RockPaperScissors'
+import { PetTimeline } from './PetTimeline'
+import { logFeed, logPlay, logEvolution, logUpdateState, logBirth, getPetHistory } from '../services/petHistory'
 import {
   Dialog,
   DialogContent,
@@ -27,6 +33,10 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [chatOpen, setChatOpen] = useState(false)
+  const [activeGame, setActiveGame] = useState<'selection' | 'memory' | 'tictactoe' | 'rps' | null>(null)
+  const [showTimeline, setShowTimeline] = useState(false)
+  const previousStageRef = useRef<number | null>(null)
+  const birthLoggedRef = useRef(false)
 
   const loadPetInfo = useCallback(async () => {
     if (!address) return
@@ -34,6 +44,27 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
       setLoading(true)
       const info = await getPetInfo(tokenId, address)
       if (info) {
+        // Log birth if this is the first time loading this pet
+        if (!birthLoggedRef.current) {
+          const history = getPetHistory(tokenId)
+          if (history.length === 0) {
+            logBirth(tokenId, info.name)
+            birthLoggedRef.current = true
+          }
+        }
+
+        // Check for evolution
+        if (previousStageRef.current !== null && previousStageRef.current !== info.evolutionStage) {
+          logEvolution(
+            tokenId,
+            info.name,
+            previousStageRef.current,
+            info.evolutionStage,
+            EVOLUTION_STAGES[info.evolutionStage]
+          )
+        }
+        previousStageRef.current = info.evolutionStage
+
         setPetInfo(info)
         setError(null)
       } else {
@@ -49,11 +80,7 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
   useEffect(() => {
     if (address) {
       loadPetInfo()
-      // Refresh pet info every 30 seconds (less frequent to avoid interference)
-      const interval = setInterval(() => {
-        loadPetInfo()
-      }, 30000)
-      return () => clearInterval(interval)
+      // NO AUTOMATIC REFRESH - Only refresh manually after actions
     }
   }, [address, loadPetInfo])
 
@@ -81,6 +108,39 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
       }
 
       if (result.success) {
+        // Log the action before refreshing
+        if (petInfo) {
+          switch (action) {
+            case 'feed':
+              logFeed(tokenId, petInfo.name, {
+                happiness: petInfo.happiness,
+                hunger: petInfo.hunger,
+                health: petInfo.health,
+              })
+              // Store last action for AI context
+              localStorage.setItem(`lastAction_${tokenId}`, 'feed')
+              break
+            case 'play':
+              logPlay(tokenId, petInfo.name, {
+                happiness: petInfo.happiness,
+                hunger: petInfo.hunger,
+                health: petInfo.health,
+              })
+              // Store last action for AI context
+              localStorage.setItem(`lastAction_${tokenId}`, 'play')
+              break
+            case 'update':
+              logUpdateState(tokenId, petInfo.name, {
+                happiness: petInfo.happiness,
+                hunger: petInfo.hunger,
+                health: petInfo.health,
+              })
+              // Store last action for AI context
+              localStorage.setItem(`lastAction_${tokenId}`, 'update')
+              break
+          }
+        }
+
         // Wait a bit for transaction to settle, then refresh
         // Use a longer delay to ensure transaction is confirmed
         setTimeout(() => {
@@ -95,6 +155,19 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
     } finally {
       setActionLoading(null)
     }
+  }
+
+  const handleGameWin = (gameName: string) => {
+    // Store the game name in localStorage for AI chat context
+    localStorage.setItem('lastGameWon', gameName)
+    
+    // Close the game modal
+    setActiveGame(null)
+    
+    // Trigger the play action to reward the pet
+    setTimeout(() => {
+      handleAction('play')
+    }, 100)
   }
 
   if (loading) {
@@ -124,13 +197,21 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
 
   return (
     <div className="p-5">
-      <Button 
-        onClick={onBack}
-        variant="outline"
-        className="mb-5"
-      >
-        ← Back to Pet List
-      </Button>
+      <div className="flex gap-3 mb-5">
+        <Button 
+          onClick={onBack}
+          variant="outline"
+        >
+          ← Back to Pet List
+        </Button>
+        <Button 
+          onClick={() => setShowTimeline(true)}
+          variant="default"
+          className="font-fredoka"
+        >
+          📜 View Timeline
+        </Button>
+      </div>
 
       {/* Top Section: Pet Avatar/Name and Stats/Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -209,13 +290,12 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                handleAction('play')
+                setActiveGame('selection')
               }}
               disabled={actionLoading !== null}
               className="bg-gradient-to-br from-yellow-500 to-yellow-300 text-gray-900 border-0 text-lg font-bold py-4 font-fredoka"
-              style={{ opacity: actionLoading === 'play' ? 0.6 : 1 }}
             >
-              {actionLoading === 'play' ? 'Playing...' : '🎮 Play'}
+              🎮 Play
             </Button>
 
             <Button
@@ -229,7 +309,7 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
               className="col-span-2 bg-gradient-to-br from-blue-500 to-blue-400 text-white border-0 text-lg font-bold py-4 font-fredoka"
               style={{ opacity: actionLoading === 'update' ? 0.6 : 1 }}
             >
-              {actionLoading === 'update' ? 'Updating...' : '🔄 Update State'}
+              {actionLoading === 'update' ? 'Refreshing...' : '🔄 Refresh'}
             </Button>
           </div>
 
@@ -252,7 +332,7 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
         </Button>
       </div>
 
-      {/* Chat Modal */}
+      {/* Chat Modal - Always render but control visibility */}
       <Dialog open={chatOpen} onOpenChange={setChatOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden p-0">
           <DialogHeader className="sr-only">
@@ -267,10 +347,49 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
               hunger={petInfo.hunger}
               health={petInfo.health}
               age={petInfo.age}
+              tokenId={tokenId}
             />
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Game Modals */}
+      {activeGame === 'selection' && (
+        <GameSelectionModal
+          onGameSelect={setActiveGame}
+          onClose={() => setActiveGame(null)}
+        />
+      )}
+
+      {activeGame === 'memory' && (
+        <MemoryGame
+          onGameWin={handleGameWin}
+          onClose={() => setActiveGame(null)}
+        />
+      )}
+
+      {activeGame === 'tictactoe' && (
+        <TicTacToe
+          onGameWin={handleGameWin}
+          onClose={() => setActiveGame(null)}
+        />
+      )}
+
+      {activeGame === 'rps' && (
+        <RockPaperScissors
+          onGameWin={handleGameWin}
+          onClose={() => setActiveGame(null)}
+        />
+      )}
+
+      {/* Timeline Modal */}
+      {showTimeline && petInfo && (
+        <PetTimeline
+          tokenId={tokenId}
+          petName={petInfo.name}
+          onClose={() => setShowTimeline(false)}
+        />
+      )}
     </div>
   )
 }

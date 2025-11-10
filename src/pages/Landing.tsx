@@ -38,11 +38,6 @@ const Landing: React.FC = () => {
           <p className="text-xl text-gray-700 mb-4 max-w-2xl">
             Your virtual pets on Stellar blockchain. Chat with them, feed them, and watch them evolve!
           </p>
-          
-          <p className="text-lg text-gray-600 mb-12 max-w-xl">
-            Connect your wallet to start your journey with your digital companions. 
-            Each pet is a unique NFT that grows and evolves based on your care.
-          </p>
 
           <Button
             size="lg"

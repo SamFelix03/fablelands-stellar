@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWallet } from "../hooks/useWallet";
+import { useSupabaseUser } from "../hooks/useSupabaseUser";
 import { PetList } from "../components/PetList";
 import { PetDetail } from "../components/PetDetail";
 import { WalletButton } from "../components/WalletButton";
@@ -8,6 +9,8 @@ import { WalletButton } from "../components/WalletButton";
 const Home: React.FC = () => {
   const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
   const { address } = useWallet();
+  // Initialize Supabase user when wallet is connected
+  useSupabaseUser();
   const navigate = useNavigate();
 
   useEffect(() => {
