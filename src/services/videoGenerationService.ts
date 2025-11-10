@@ -2,7 +2,7 @@
 // Generates happy/sad/angry videos from pet avatar images using the clipgen API
 
 // Use proxy in development, direct URL in production
-const CLIPGEN_API_URL = 'https://fablelands-stellar-sa5q.vercel.app/api/clipgen'
+const CLIPGEN_API_URL =  'https://clipgen-739298578243.us-central1.run.app'  // Direct URL in production
 const POLL_INTERVAL = 3000 // Poll every 3 seconds
 const MAX_POLL_ATTEMPTS = 120 // Max 6 minutes (120 * 3s)
 
