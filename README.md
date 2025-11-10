@@ -8,6 +8,116 @@ What if your NFT could get hungry? What if it could feel lonely? What if it coul
 
 FableLands answers these questions by creating a Crypto-AI game that enables genuine, emotional bonds between users and their digital companions. Each pet is a unique NFT with its own personality, memory, and lifecycle, all managed entirely on-chain through Stellar smart contracts.
 
+## Core Features
+
+### Pet Lifecycle Management
+
+FableLands implements a complete pet lifecycle from birth to evolution, with stat management, death mechanics, and revival capabilities. Pets are born as Eggs with maximum stats and progress through four evolution stages based on time and care. The system tracks happiness, hunger, and health as independent metrics that influence pet behavior and visual appearance.
+
+### Time-Based Stat Decay
+
+Pets experience realistic stat decay over time, with hunger increasing and happiness decreasing based on elapsed Stellar ledger sequences. This creates urgency for user interaction and makes pet care a continuous engagement rather than a one-time action. The decay rates are configurable through contract constants, allowing for game balance adjustments.
+
+### Evolution System
+
+Pets evolve through four distinct stages: Egg, Baby, Teen, and Adult. Evolution is triggered automatically when pets reach specific ledger count thresholds and maintain minimum happiness levels. Each evolution stage unlocks new visual assets and personality traits in AI conversations. The evolution process is tracked on-chain and triggers automatic asset regeneration for the new stage.
+
+### Interactive Games
+
+The application includes three mini-games that users can play with their pets: Memory Game, Tic-Tac-Toe, and Rock Paper Scissors. Winning games increases pet happiness and triggers achievement tracking. Game results are remembered by the AI, allowing pets to reference specific games in conversations.
+
+### Achievement System
+
+A comprehensive achievement system tracks user accomplishments across eight different achievement types with varying rarities. Achievements are awarded automatically for milestones like first pet mint, first evolution, feeding streaks, and reaching perfect stats. The system uses an ERC-1155-like structure, allowing achievements to function as collectible NFT badges.
+
+### AI-Powered Conversations
+
+Pets engage in natural language conversations powered by GPT-4o, with context awareness of their current stats, recent actions, and evolution stage. The AI maintains personality consistency across interactions while adapting responses to the pet's emotional state. Conversations feel genuine and create emotional bonds between users and their digital companions.
+
+### Dynamic Visual Assets
+
+Each pet receives unique visual assets generated through AI image and video synthesis. Avatars are created based on creature type, evolution stage, and current life quality. Three emotion-based videos (happy, sad, angry) are generated and automatically displayed based on the pet's current mood, determined by stat thresholds.
+
+### Automatic State Maintenance
+
+A background cron job automatically updates all pet states every 5 minutes using a contract owner secret key. This ensures pets continue to evolve and experience stat changes even when users are not actively interacting with them. The system scans all existing pets and updates them in batch operations for efficiency.
+
+### Pet Timeline and History
+
+A comprehensive timeline tracks all significant events in a pet's life, including birth, evolution, feeding, playing, and stat milestones. Events are stored in localStorage with timestamps and stat snapshots, providing users with a detailed history of their pet's journey.
+
+### Supabase Integration
+
+Pet metadata including generated asset URLs, creature types, and evolution stages are stored in Supabase for efficient retrieval and display. The database schema includes user management, pet metadata relationships, and Row Level Security policies for data protection.
+
+### Creature Type Selection
+
+Users can choose from three creature types (dragon, unicorn, dino) when minting pets. This selection influences all generated assets, with creature-specific prompts used for image and video generation. The creature type is stored in Supabase and used throughout the pet's lifecycle.
+
+### Real-Time Mood Display
+
+Pets visually express their emotional state through mood-based video playback. The system automatically determines mood from stat thresholds and plays the appropriate video (happy, sad, or angry). This creates an immediate visual feedback system that communicates pet well-being without requiring stat inspection.
+
+### Cross-Contract Achievement Tracking
+
+The PetWorld and Achievement contracts work together seamlessly, with PetWorld automatically calling Achievement contract functions to track user actions and award milestones. This integration happens transparently to users while maintaining on-chain verifiability of all achievements.
+
+## Stellar Scaffold Framework Integration
+
+FableLands leverages the Scaffold Stellar framework to accelerate development and simplify deployment of Stellar smart contracts and frontend applications.
+
+### Smart Contract Development
+
+Scaffold Stellar eliminates boilerplate by generating smart contract projects written in Rust and compiled to WebAssembly. The framework provides:
+
+- **Automated Contract Structure:** The contracts are organized with proper Soroban SDK imports, contract types, and implementation patterns. See [contracts/fablelands/src/lib.rs](contracts/fablelands/src/lib.rs) and [contracts/fablelands_achievements/src/lib.rs](contracts/fablelands_achievements/src/lib.rs)
+
+- **Type-Safe Contract Interfaces:** The framework generates TypeScript clients from contract definitions, enabling type-safe contract interactions in the frontend.
+
+- **Hot Reload Support:** Contract changes are automatically detected and rebuilt, allowing for rapid iteration during development.
+
+- **Environment Configuration:** The `environments.toml` file provides centralized configuration for different network environments (local, testnet, mainnet), simplifying deployment across networks.
+
+### Frontend Architecture
+
+The frontend is built with modern TypeScript and React tooling using Vite, generated by Scaffold Stellar:
+
+- **Component Structure:** The application follows a component-based architecture with clear separation of concerns. Pet management, game components, chat interfaces, and achievement displays are modularized for maintainability.
+
+- **Contract Integration:** The `src/services/petworldContract.ts` service provides a clean abstraction layer for contract interactions, handling transaction building, simulation, and error management. See [src/services/petworldContract.ts](src/services/petworldContract.ts)
+
+- **State Management:** React hooks manage application state, with custom hooks for wallet connection, balance tracking, and Supabase user management.
+
+- **Routing:** React Router handles navigation between landing page, pet list, and pet detail views.
+
+### Stellar Wallet Kit Integration
+
+The Stellar Wallet Kit is seamlessly integrated into the application, providing a standardized interface for wallet connections and transaction signing:
+
+- **Multi-Wallet Support:** The application supports multiple Stellar wallet providers through the Wallet Kit abstraction, allowing users to connect with their preferred wallet.
+
+- **Transaction Signing:** All contract interactions (mint, feed, play, update_state) require wallet authentication and transaction signing, handled transparently by the Wallet Kit.
+
+- **Balance Management:** The Wallet Kit integration enables real-time balance queries and display, ensuring users are aware of their account status.
+
+- **Network Configuration:** Wallet operations automatically use the configured network (testnet in production) from environment variables.
+
+**Implementation:** The wallet integration is implemented in `src/hooks/useWallet.ts` and `src/providers/WalletProvider.tsx`, providing a React context for wallet state management throughout the application.
+
+### Deployment and Contract Management
+
+Scaffold Stellar simplifies contract deployment through the `stellar registry` command system:
+
+- **Contract Publishing:** Contracts are published to the Stellar registry for discoverability and versioning.
+
+- **Instance Deployment:** Contract instances are deployed with constructor parameters, enabling multiple contract deployments with different configurations.
+
+- **Alias Management:** Local aliases can be created for deployed contracts, simplifying development and testing workflows.
+
+**Deployed Contracts:**
+- **PetWorld Contract:** `CCLH6KHEBKNUX4MOLDKINELR34UWXNTFXCF5XXXSGCT4EZKXQN47U3YE` (Testnet)
+- **Achievement Contract:** `CDCUYVGQWJ44NDSIITVDLYHWJGYS35LLTVVKLYQUGARH2Z7MCREBIALT` (Testnet)
+
 ## Architecture Overview
 
 FableLands is built on a multi-layered architecture combining Stellar smart contracts, AI services, and modern web technologies to create an immersive pet ownership experience.
@@ -19,210 +129,29 @@ The application leverages two primary smart contracts deployed on the Stellar Te
 #### Contract Architecture
 
 ```mermaid
-graph TB
-    subgraph "PetWorld Contract"
-        subgraph "Instance Storage"
-            IS1[Owner Address]
-            IS2[NextTokenId Counter]
-            IS3[BlocksPerHungerPoint: 30]
-            IS4[BlocksPerHappinessDecay: 60]
-            IS5[FeedCost: 0.001 XLM]
-            IS6[MintCost: 0.01 XLM]
-            IS7[RevivalCost: 0.005 XLM]
-            IS8[EggToBabyBlocks: 36]
-            IS9[BabyToTeenBlocks: 84]
-            IS10[TeenToAdultBlocks: 144]
-            IS11[EvolutionHappinessThreshold: 60]
-            IS12[AchievementContract Address]
-        end
-        
-        subgraph "Persistent Storage"
-            PS1[Pet struct<br/>token_id -> Pet]
-            PS2[TokenOwner<br/>token_id -> Address]
-            PS3[OwnerBalance<br/>Address -> u128]
-            PS4[OwnerTokens<br/>Address, index -> token_id]
-            PS5[TokenURI<br/>token_id -> String]
-        end
-        
-        subgraph "Public Functions"
-            F1[initialize]
-            F2[mint]
-            F3[update_state]
-            F4[feed]
-            F5[play]
-            F6[revive]
-            F7[get_pet_info]
-            F8[get_user_pets]
-            F9[batch_update_state]
-            F10[transfer]
-            F11[owner_of]
-            F12[balance_of]
-        end
-        
-        subgraph "Internal Functions"
-            IF1[_check_and_evolve]
-            IF2[_call_record_first_pet]
-            IF3[_call_record_feed]
-            IF4[_call_record_play]
-            IF5[_call_record_evolution]
-            IF6[_call_record_revival]
-            IF7[_call_record_perfect_stats]
-        end
-        
-        F1 --> IS1
-        F1 --> IS2
-        F1 --> IS3
-        F2 --> PS1
-        F2 --> PS2
-        F2 --> PS3
-        F2 --> PS4
-        F2 --> IF2
-        F3 --> PS1
-        F3 --> IS3
-        F3 --> IS4
-        F3 --> IF1
-        F4 --> F3
-        F4 --> PS1
-        F4 --> IF3
-        F4 --> IF7
-        F4 --> IF1
-        F5 --> F3
-        F5 --> PS1
-        F5 --> IF4
-        F5 --> IF7
-        F5 --> IF1
-        F6 --> PS1
-        F6 --> IF6
-        IF1 --> PS1
-        IF1 --> IS8
-        IF1 --> IS9
-        IF1 --> IS10
-        IF1 --> IS11
-        IF1 --> IF5
-        IF2 --> IS12
-        IF3 --> IS12
-        IF4 --> IS12
-        IF5 --> IS12
-        IF6 --> IS12
-        IF7 --> IS12
+graph LR
+    subgraph PW["PetWorld Contract"]
+        PW_STORAGE[Storage<br/>Pet Data<br/>Ownership<br/>Stats]
+        PW_FUNCS[Functions<br/>mint<br/>feed<br/>play<br/>update_state<br/>evolve]
+        PW_INTERNAL[Internal<br/>_check_and_evolve<br/>_call_record_*]
     end
     
-    subgraph "Achievement Contract"
-        subgraph "Instance Storage AC"
-            AC_IS1[Owner Address]
-            AC_IS2[PetWorldContract Address]
-        end
-        
-        subgraph "Persistent Storage AC"
-            AC_PS1[Achievement struct<br/>achievement_id -> Achievement]
-            AC_PS2[HasEarnedBadge<br/>Address, achievement_id -> bool]
-            AC_PS3[PetHasBadge<br/>pet_token_id, achievement_id -> bool]
-            AC_PS4[FeedCount<br/>Address -> u128]
-            AC_PS5[PlayCount<br/>Address -> u128]
-            AC_PS6[HasFirstPet<br/>Address -> bool]
-            AC_PS7[HasEvolved<br/>Address -> bool]
-            AC_PS8[HasRevived<br/>Address -> bool]
-            AC_PS9[ReachedStage<br/>Address, stage -> bool]
-            AC_PS10[Balance<br/>Address, achievement_id -> u128]
-            AC_PS11[TotalSupply<br/>achievement_id -> u128]
-        end
-        
-        subgraph "Public Functions AC"
-            AC_F1[initialize]
-            AC_F2[set_petworld_contract]
-            AC_F3[award_achievement]
-            AC_F4[record_first_pet]
-            AC_F5[record_feed]
-            AC_F6[record_play]
-            AC_F7[record_evolution]
-            AC_F8[record_revival]
-            AC_F9[record_perfect_stats]
-            AC_F10[get_user_achievements]
-            AC_F11[get_pet_achievements]
-            AC_F12[get_all_achievements]
-            AC_F13[has_earned]
-        end
-        
-        subgraph "Internal Functions AC"
-            AC_IF1[_initialize_achievements]
-        end
-        
-        AC_F1 --> AC_IS1
-        AC_F1 --> AC_IF1
-        AC_IF1 --> AC_PS1
-        AC_F2 --> AC_IS2
-        AC_F3 --> AC_IS2
-        AC_F3 --> AC_PS2
-        AC_F3 --> AC_PS3
-        AC_F3 --> AC_PS1
-        AC_F3 --> AC_PS10
-        AC_F3 --> AC_PS11
-        AC_F4 --> AC_IS2
-        AC_F4 --> AC_PS6
-        AC_F4 --> AC_F3
-        AC_F5 --> AC_IS2
-        AC_F5 --> AC_PS4
-        AC_F5 --> AC_F3
-        AC_F6 --> AC_IS2
-        AC_F6 --> AC_PS5
-        AC_F6 --> AC_F3
-        AC_F7 --> AC_IS2
-        AC_F7 --> AC_PS7
-        AC_F7 --> AC_PS9
-        AC_F7 --> AC_F3
-        AC_F8 --> AC_IS2
-        AC_F8 --> AC_PS8
-        AC_F8 --> AC_F3
-        AC_F9 --> AC_IS2
-        AC_F9 --> AC_F3
-        AC_F10 --> AC_PS2
-        AC_F11 --> AC_PS3
-        AC_F12 --> AC_PS1
-        AC_F13 --> AC_PS2
+    subgraph AC["Achievement Contract"]
+        AC_STORAGE[Storage<br/>Achievements<br/>User Badges<br/>Counters]
+        AC_FUNCS[Functions<br/>award_achievement<br/>record_*<br/>get_*]
     end
     
-    IF2 -.->|invoke_contract| AC_F4
-    IF3 -.->|invoke_contract| AC_F5
-    IF4 -.->|invoke_contract| AC_F6
-    IF5 -.->|invoke_contract| AC_F7
-    IF6 -.->|invoke_contract| AC_F8
-    IF7 -.->|invoke_contract| AC_F9
+    PW_FUNCS --> PW_STORAGE
+    PW_INTERNAL -.->|invoke_contract| AC_FUNCS
+    AC_FUNCS --> AC_STORAGE
     
-    style IS1 fill:#e1f5ff
-    style IS2 fill:#e1f5ff
-    style IS3 fill:#e1f5ff
-    style IS4 fill:#e1f5ff
-    style IS5 fill:#e1f5ff
-    style IS6 fill:#e1f5ff
-    style IS7 fill:#e1f5ff
-    style IS8 fill:#e1f5ff
-    style IS9 fill:#e1f5ff
-    style IS10 fill:#e1f5ff
-    style IS11 fill:#e1f5ff
-    style IS12 fill:#e1f5ff
-    style PS1 fill:#fff4e1
-    style PS2 fill:#fff4e1
-    style PS3 fill:#fff4e1
-    style PS4 fill:#fff4e1
-    style PS5 fill:#fff4e1
-    style AC_IS1 fill:#e1f5ff
-    style AC_IS2 fill:#e1f5ff
-    style AC_PS1 fill:#fff4e1
-    style AC_PS2 fill:#fff4e1
-    style AC_PS3 fill:#fff4e1
-    style AC_PS4 fill:#fff4e1
-    style AC_PS5 fill:#fff4e1
-    style AC_PS6 fill:#fff4e1
-    style AC_PS7 fill:#fff4e1
-    style AC_PS8 fill:#fff4e1
-    style AC_PS9 fill:#fff4e1
-    style AC_PS10 fill:#fff4e1
-    style AC_PS11 fill:#fff4e1
+    style PW fill:#e1f5ff
+    style AC fill:#fff4e1
 ```
 
-#### fablelands Contract
+#### PetWorld Contract
 
-The fablelands contract (`contracts/fablelands/src/lib.rs`) serves as the core NFT and pet management system. It implements a comprehensive pet lifecycle with the following key functionalities:
+The PetWorld contract (`contracts/fablelands/src/lib.rs`) serves as the core NFT and pet management system. It implements a comprehensive pet lifecycle with the following key functionalities:
 
 **Core Functions:**
 
@@ -409,115 +338,6 @@ The pet asset service (`src/services/petAssetService.ts`) orchestrates the compl
 
 The service includes comprehensive error handling and progress callbacks for real-time UI updates during the generation process.
 
-### Stellar Scaffold Framework Integration
-
-FableLands leverages the Scaffold Stellar framework to accelerate development and simplify deployment of Stellar smart contracts and frontend applications.
-
-#### Smart Contract Development
-
-Scaffold Stellar eliminates boilerplate by generating smart contract projects written in Rust and compiled to WebAssembly. The framework provides:
-
-- **Automated Contract Structure:** The contracts are organized with proper Soroban SDK imports, contract types, and implementation patterns. See [contracts/fablelands/src/lib.rs](contracts/fablelands/src/lib.rs) and [contracts/fablelands_achievements/src/lib.rs](contracts/fablelands_achievements/src/lib.rs)
-
-- **Type-Safe Contract Interfaces:** The framework generates TypeScript clients from contract definitions, enabling type-safe contract interactions in the frontend.
-
-- **Hot Reload Support:** Contract changes are automatically detected and rebuilt, allowing for rapid iteration during development.
-
-- **Environment Configuration:** The `environments.toml` file provides centralized configuration for different network environments (local, testnet, mainnet), simplifying deployment across networks.
-
-#### Frontend Architecture
-
-The frontend is built with modern TypeScript and React tooling using Vite, generated by Scaffold Stellar:
-
-- **Component Structure:** The application follows a component-based architecture with clear separation of concerns. Pet management, game components, chat interfaces, and achievement displays are modularized for maintainability.
-
-- **Contract Integration:** The `src/services/petworldContract.ts` service provides a clean abstraction layer for contract interactions, handling transaction building, simulation, and error management. See [src/services/petworldContract.ts](src/services/petworldContract.ts)
-
-- **State Management:** React hooks manage application state, with custom hooks for wallet connection, balance tracking, and Supabase user management.
-
-- **Routing:** React Router handles navigation between landing page, pet list, and pet detail views.
-
-#### Stellar Wallet Kit Integration
-
-The Stellar Wallet Kit is seamlessly integrated into the application, providing a standardized interface for wallet connections and transaction signing:
-
-- **Multi-Wallet Support:** The application supports multiple Stellar wallet providers through the Wallet Kit abstraction, allowing users to connect with their preferred wallet.
-
-- **Transaction Signing:** All contract interactions (mint, feed, play, update_state) require wallet authentication and transaction signing, handled transparently by the Wallet Kit.
-
-- **Balance Management:** The Wallet Kit integration enables real-time balance queries and display, ensuring users are aware of their account status.
-
-- **Network Configuration:** Wallet operations automatically use the configured network (testnet in production) from environment variables.
-
-**Implementation:** The wallet integration is implemented in `src/hooks/useWallet.ts` and `src/providers/WalletProvider.tsx`, providing a React context for wallet state management throughout the application.
-
-#### Deployment and Contract Management
-
-Scaffold Stellar simplifies contract deployment through the `stellar registry` command system:
-
-- **Contract Publishing:** Contracts are published to the Stellar registry for discoverability and versioning.
-
-- **Instance Deployment:** Contract instances are deployed with constructor parameters, enabling multiple contract deployments with different configurations.
-
-- **Alias Management:** Local aliases can be created for deployed contracts, simplifying development and testing workflows.
-
-**Deployed Contracts:**
-- **PetWorld Contract:** `CCLH6KHEBKNUX4MOLDKINELR34UWXNTFXCF5XXXSGCT4EZKXQN47U3YE` (Testnet)
-- **Achievement Contract:** `CDCUYVGQWJ44NDSIITVDLYHWJGYS35LLTVVKLYQUGARH2Z7MCREBIALT` (Testnet)
-
-## Core Features
-
-### Pet Lifecycle Management
-
-FableLands implements a complete pet lifecycle from birth to evolution, with stat management, death mechanics, and revival capabilities. Pets are born as Eggs with maximum stats and progress through four evolution stages based on time and care. The system tracks happiness, hunger, and health as independent metrics that influence pet behavior and visual appearance.
-
-### Time-Based Stat Decay
-
-Pets experience realistic stat decay over time, with hunger increasing and happiness decreasing based on elapsed Stellar ledger sequences. This creates urgency for user interaction and makes pet care a continuous engagement rather than a one-time action. The decay rates are configurable through contract constants, allowing for game balance adjustments.
-
-### Evolution System
-
-Pets evolve through four distinct stages: Egg, Baby, Teen, and Adult. Evolution is triggered automatically when pets reach specific ledger count thresholds and maintain minimum happiness levels. Each evolution stage unlocks new visual assets and personality traits in AI conversations. The evolution process is tracked on-chain and triggers automatic asset regeneration for the new stage.
-
-### Interactive Games
-
-The application includes three mini-games that users can play with their pets: Memory Game, Tic-Tac-Toe, and Rock Paper Scissors. Winning games increases pet happiness and triggers achievement tracking. Game results are remembered by the AI, allowing pets to reference specific games in conversations.
-
-### Achievement System
-
-A comprehensive achievement system tracks user accomplishments across eight different achievement types with varying rarities. Achievements are awarded automatically for milestones like first pet mint, first evolution, feeding streaks, and reaching perfect stats. The system uses an ERC-1155-like structure, allowing achievements to function as collectible NFT badges.
-
-### AI-Powered Conversations
-
-Pets engage in natural language conversations powered by GPT-4o, with context awareness of their current stats, recent actions, and evolution stage. The AI maintains personality consistency across interactions while adapting responses to the pet's emotional state. Conversations feel genuine and create emotional bonds between users and their digital companions.
-
-### Dynamic Visual Assets
-
-Each pet receives unique visual assets generated through AI image and video synthesis. Avatars are created based on creature type, evolution stage, and current life quality. Three emotion-based videos (happy, sad, angry) are generated and automatically displayed based on the pet's current mood, determined by stat thresholds.
-
-### Automatic State Maintenance
-
-A background cron job automatically updates all pet states every 5 minutes using a contract owner secret key. This ensures pets continue to evolve and experience stat changes even when users are not actively interacting with them. The system scans all existing pets and updates them in batch operations for efficiency.
-
-### Pet Timeline and History
-
-A comprehensive timeline tracks all significant events in a pet's life, including birth, evolution, feeding, playing, and stat milestones. Events are stored in localStorage with timestamps and stat snapshots, providing users with a detailed history of their pet's journey.
-
-### Supabase Integration
-
-Pet metadata including generated asset URLs, creature types, and evolution stages are stored in Supabase for efficient retrieval and display. The database schema includes user management, pet metadata relationships, and Row Level Security policies for data protection.
-
-### Creature Type Selection
-
-Users can choose from three creature types (dragon, unicorn, dino) when minting pets. This selection influences all generated assets, with creature-specific prompts used for image and video generation. The creature type is stored in Supabase and used throughout the pet's lifecycle.
-
-### Real-Time Mood Display
-
-Pets visually express their emotional state through mood-based video playback. The system automatically determines mood from stat thresholds and plays the appropriate video (happy, sad, or angry). This creates an immediate visual feedback system that communicates pet well-being without requiring stat inspection.
-
-### Cross-Contract Achievement Tracking
-
-The PetWorld and Achievement contracts work together seamlessly, with PetWorld automatically calling Achievement contract functions to track user actions and award milestones. This integration happens transparently to users while maintaining on-chain verifiability of all achievements.
 
 ## Technical Stack
 
