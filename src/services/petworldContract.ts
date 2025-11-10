@@ -80,7 +80,16 @@ export async function readContract(
     
     // Check for errors
     if (simulation.error) {
-      console.error(`Read failed for ${methodName}:`, simulation.error)
+      // Check if it's a "pet doesn't exist" error (UnreachableCodeReached)
+      const errorMessage = simulation.error?.message || ''
+      const isNotFoundError = errorMessage.includes('UnreachableCodeReached') || 
+                             errorMessage.includes('InvalidAction') ||
+                             errorMessage.includes('WasmVm')
+      
+      // Only log non-expected errors (suppress "not found" errors for scanning)
+      if (!isNotFoundError) {
+        console.error(`Read failed for ${methodName}:`, simulation.error)
+      }
       return null
     }
     

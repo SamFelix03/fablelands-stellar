@@ -135,47 +135,80 @@ export async function autoUpdatePetState(
 
 // Get all pet IDs in the contract by iterating through token IDs
 async function getAllPetIds(secretKey: string): Promise<number[]> {
-  const keypair = StellarSdk.Keypair.fromSecret(secretKey)
-  const userAddress = keypair.publicKey()
-  
-  const petIds: number[] = []
-  let tokenId = 1 // Start from token ID 1
-  const MAX_ITERATIONS = 10000 // Safety limit to prevent infinite loops
-  
-  console.log('🔍 Scanning for all pets in contract...')
-  
-  for (let i = 0; i < MAX_ITERATIONS; i++) {
-    try {
-      // Try to get pet info - if it exists, add to list
-      const petInfo = await getPetInfo(tokenId, userAddress)
-      if (petInfo && petInfo.name) {
-        petIds.push(tokenId)
-        console.log(`  Found pet #${tokenId}: ${petInfo.name}`)
-      } else {
-        // If we get null/invalid, we've likely reached the end
-        // But continue a bit more in case of gaps
-        if (i > 10 && petIds.length === 0) {
-          // If we've checked 10+ IDs and found nothing, stop
+  try {
+    const keypair = StellarSdk.Keypair.fromSecret(secretKey)
+    const userAddress = keypair.publicKey()
+    
+    console.log(`🔍 Scanning for all pets in contract...`)
+    console.log(`   Using account: ${userAddress}`)
+    
+    const petIds: number[] = []
+    let tokenId = 1 // Start from token ID 1
+    const MAX_ITERATIONS = 10000 // Safety limit to prevent infinite loops
+    let consecutiveNotFound = 0
+    const MAX_CONSECUTIVE_NOT_FOUND = 10 // Stop after 10 consecutive not found
+    
+    for (let i = 0; i < MAX_ITERATIONS; i++) {
+      try {
+        // Try to get pet info - if it exists, add to list
+        const petInfo = await getPetInfo(tokenId, userAddress)
+        if (petInfo && petInfo.name) {
+          petIds.push(tokenId)
+          consecutiveNotFound = 0 // Reset counter
+          console.log(`  ✅ Found pet #${tokenId}: ${petInfo.name}`)
+        } else {
+          // Pet doesn't exist (returned null)
+          consecutiveNotFound++
+          if (consecutiveNotFound >= MAX_CONSECUTIVE_NOT_FOUND) {
+            console.log(`  ⏹️ Stopped scanning after ${MAX_CONSECUTIVE_NOT_FOUND} consecutive not found (last checked: #${tokenId})`)
+            break
+          }
+        }
+      } catch (error: any) {
+        // Contract panics for non-existent pets - this is expected
+        const errorMessage = error?.message || ''
+        const isNotFoundError = errorMessage.includes('UnreachableCodeReached') || 
+                               errorMessage.includes('InvalidAction') ||
+                               errorMessage.includes('WasmVm') ||
+                               errorMessage.includes('HostError')
+        
+        if (isNotFoundError) {
+          // This is expected - pet doesn't exist
+          consecutiveNotFound++
+          if (consecutiveNotFound >= MAX_CONSECUTIVE_NOT_FOUND) {
+            console.log(`  ⏹️ Stopped scanning after ${MAX_CONSECUTIVE_NOT_FOUND} consecutive not found (last checked: #${tokenId})`)
+            break
+          }
+        } else {
+          // Unexpected error - log it
+          console.warn(`  ⚠️ Unexpected error checking pet #${tokenId}:`, errorMessage)
+          consecutiveNotFound++
+          if (consecutiveNotFound >= MAX_CONSECUTIVE_NOT_FOUND) {
+            console.log(`  ⏹️ Stopped scanning after ${MAX_CONSECUTIVE_NOT_FOUND} consecutive errors (last checked: #${tokenId})`)
+            break
+          }
+        }
+        
+        // If we've found pets and checked many IDs past the last one, stop
+        if (petIds.length > 0 && tokenId > petIds[petIds.length - 1] + MAX_CONSECUTIVE_NOT_FOUND) {
+          console.log(`  ⏹️ Stopped scanning (checked ${MAX_CONSECUTIVE_NOT_FOUND} IDs past last found pet)`)
           break
         }
       }
-    } catch (error: any) {
-      // If we get an error, the pet probably doesn't exist
-      // Continue checking a few more IDs in case of gaps, then stop
-      if (petIds.length > 0 && i > petIds[petIds.length - 1] + 10) {
-        // If we've checked 10 IDs past the last found pet, stop
-        break
-      }
+      
+      tokenId++
+      
+      // Small delay to avoid overwhelming the network
+      await new Promise(resolve => setTimeout(resolve, 100))
     }
     
-    tokenId++
-    
-    // Small delay to avoid overwhelming the network
-    await new Promise(resolve => setTimeout(resolve, 100))
+    console.log(`✅ Found ${petIds.length} pet(s) in contract: [${petIds.join(', ')}]`)
+    return petIds
+  } catch (error: any) {
+    console.error('❌ Error in getAllPetIds:', error)
+    console.error('   Error message:', error.message)
+    return []
   }
-  
-  console.log(`✅ Found ${petIds.length} pet(s) in contract`)
-  return petIds
 }
 
 // Update all pets in the contract (regardless of owner)
