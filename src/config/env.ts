@@ -18,8 +18,8 @@ export function getEnvConfig(): EnvConfig {
   // Vite automatically loads .env files and exposes PUBLIC_ prefixed vars
   // dotenv.config() in vite.config.ts ensures .env is loaded
   const openaiApiKey = import.meta.env.PUBLIC_OPENAI_API_KEY
-  const petworldContract = import.meta.env.PUBLIC_PETWORLD_CONTRACT || 'CCS7FD7WUCYW6RAHYBUYO6NPXBDZHFLSUA4SNBASMXJNQUCB4JOEH3TQ'
-  const achievementContract = import.meta.env.PUBLIC_ACHIEVEMENT_CONTRACT || 'CDO4QOUDJNIXZAN2AHNW6HLXFOEABWZTW3KM3MIZFOEYWOIDEGM5T62S'
+  const petworldContract = import.meta.env.PUBLIC_PETWORLD_CONTRACT || 'CCLH6KHEBKNUX4MOLDKINELR34UWXNTFXCF5XXXSGCT4EZKXQN47U3YE'
+  const achievementContract = import.meta.env.PUBLIC_ACHIEVEMENT_CONTRACT || 'CDCUYVGQWJ44NDSIITVDLYHWJGYS35LLTVVKLYQUGARH2Z7MCREBIALT'
   const stellarNetwork = import.meta.env.PUBLIC_STELLAR_NETWORK || 'TESTNET'
   const stellarRpcUrl = import.meta.env.PUBLIC_STELLAR_RPC_URL || 'https://soroban-testnet.stellar.org'
   const stellarHorizonUrl = import.meta.env.PUBLIC_STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org'

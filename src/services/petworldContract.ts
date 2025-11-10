@@ -8,7 +8,7 @@ import { rpcUrl, networkPassphrase } from '../contracts/util'
 // Get contract address from environment or use default testnet contract
 const getContractAddress = () => {
   // @ts-ignore - import.meta.env is available in Vite
-  return import.meta.env?.PUBLIC_PETWORLD_CONTRACT || 'CCS7FD7WUCYW6RAHYBUYO6NPXBDZHFLSUA4SNBASMXJNQUCB4JOEH3TQ'
+  return import.meta.env?.PUBLIC_PETWORLD_CONTRACT || 'CCLH6KHEBKNUX4MOLDKINELR34UWXNTFXCF5XXXSGCT4EZKXQN47U3YE'
 }
 
 const PETWORLD_CONTRACT = getContractAddress()

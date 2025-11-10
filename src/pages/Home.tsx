@@ -36,7 +36,7 @@ const Home: React.FC = () => {
               color: "#000",
             }}
           >
-            🐾 PET WORLD
+            🐾 FableLands
           </h1>
           <WalletButton />
         </div>

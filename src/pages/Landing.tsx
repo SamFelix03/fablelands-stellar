@@ -32,7 +32,7 @@ const Landing: React.FC = () => {
               color: "#000",
             }}
           >
-            PET WORLD
+            FableLands
           </h1>
           
           <p className="text-xl text-gray-700 mb-4 max-w-2xl">
