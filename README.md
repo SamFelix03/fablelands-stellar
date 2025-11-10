@@ -4,7 +4,7 @@ Feed It, Play With It, Talk To It. Your NFT just got a Soul!
 ## Important Links
 
 - **Pitch Deck**: [View Pitch Deck](https://www.canva.com/design/DAG4SrMjiq4/7R2xqCHYnN8Femoocf0YCA/view?utm_content=DAG4SrMjiq4&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=he5bb79aa02)
-- **Demo Video**: Coming soon
+- **Demo Video**: [View Demo Video](https://youtu.be/wozQ2fAgSio?si=Cj_TbFllIOEKEOQ2)
 - **Live Demo**: [Try FableLands](https://fablelands-stellar-sa5q.vercel.app/)
 
 ### Smart Contract Addresses
