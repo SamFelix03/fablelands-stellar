@@ -67,13 +67,16 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
       if (info) {
         // Get creature type, media URLs, and evolution stage from Supabase metadata
         let storedEvolutionStage: number | null = null
+        let currentCreatureType: CreatureType = 'dragon' // Use local variable, not state
         if (user) {
           const metadata = await getPetMetadata(user.id, tokenId)
           if (metadata) {
             if (metadata.creature_type) {
-              setCreatureType(metadata.creature_type as CreatureType)
+              currentCreatureType = metadata.creature_type as CreatureType
+              setCreatureType(currentCreatureType)
             } else {
               // Default to dragon if not found (for older pets)
+              currentCreatureType = 'dragon'
               setCreatureType('dragon')
             }
             
@@ -90,6 +93,7 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
               },
             })
           } else {
+            currentCreatureType = 'dragon'
             setCreatureType('dragon')
             setPetMetadata(null)
             storedEvolutionStage = null
@@ -129,11 +133,12 @@ export function PetDetail({ tokenId, onBack }: PetDetailProps) {
           setShowEvolutionModal(true)
           
           // Generate new assets for evolved stage
+          // Use currentCreatureType from metadata, not state (state might be stale)
           generatePetAssets({
             walletAddress: address,
             tokenId,
             petName: info.name,
-            creatureType: creatureType, // Use the stored creature type
+            creatureType: currentCreatureType, // Use the creature type from metadata we just fetched
             evolutionStage: toStage,
             happiness: info.happiness,
             hunger: info.hunger,

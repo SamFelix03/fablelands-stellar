@@ -106,17 +106,21 @@ export async function generatePetAvatar(params: ImageGenerationParams): Promise<
   try {
     const prompt = buildImagePrompt(params)
     
+    const requestBody = {
+      prompt,
+    }
+    
     console.log('🎨 Generating pet avatar image...')
     console.log('   Prompt:', prompt)
+    console.log('   Request Body:', JSON.stringify(requestBody, null, 2))
+    console.log('   API URL:', IMAGEGEN_API_URL)
     
     const response = await fetch(IMAGEGEN_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        prompt,
-      }),
+      body: JSON.stringify(requestBody),
     })
 
     if (!response.ok) {

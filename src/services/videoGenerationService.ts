@@ -73,6 +73,14 @@ export async function startVideoGeneration(imageUrl: string): Promise<string> {
     const formData = new FormData()
     formData.append('image', imageBlob, 'pet-avatar.jpg')
     
+    console.log('   Request Body (FormData):')
+    console.log('     - image: [Blob]', {
+      size: imageBlob.size,
+      type: imageBlob.type,
+      filename: 'pet-avatar.jpg',
+    })
+    console.log('   API URL:', `${CLIPGEN_API_URL}/generate-videos`)
+    
     const response = await fetch(`${CLIPGEN_API_URL}/generate-videos`, {
       method: 'POST',
       body: formData,

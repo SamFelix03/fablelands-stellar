@@ -1,5 +1,6 @@
 // Achievement Service
 // Handles reading achievements from the achievement contract
+// Uses the exact same logic as getUserAchievements.js
 
 import * as StellarSdk from '@stellar/stellar-sdk'
 import { rpc as StellarRpc } from '@stellar/stellar-sdk'
@@ -31,125 +32,55 @@ function getAchievementContract() {
   return contract
 }
 
-// Helper to extract u128 from ScVal
-function extractU128(val: any): bigint | null {
-  if (!val) return null
-  
-  try {
-    // Try scValToBigInt from SDK
-    const { scValToBigInt } = StellarSdk as any
-    if (scValToBigInt && typeof scValToBigInt === 'function') {
-      try {
-        return scValToBigInt(val)
-      } catch (e) {
-        // Continue to other methods
-      }
-    }
-    
-    // Handle ScVal object format
-    if (typeof val === 'object') {
-      if (val._arm === 'u128' && val._value !== undefined) {
-        return typeof val._value === 'bigint' ? val._value : BigInt(val._value)
-      }
-      if ('u128' in val) {
-        const u128Val = val.u128
-        if (typeof u128Val === 'bigint') return u128Val
-        if (typeof u128Val === 'string') return BigInt(u128Val)
-        if (typeof u128Val === 'number') return BigInt(u128Val)
-      }
-      if ('hi' in val && 'lo' in val) {
-        // Handle u128 as {hi: bigint, lo: bigint}
-        const hi = BigInt(val.hi || 0)
-        const lo = BigInt(val.lo || 0)
-        return hi * BigInt(2**64) + lo
-      }
-    }
-    
-    if (typeof val === 'bigint') return val
-    if (typeof val === 'number') return BigInt(val)
-    if (typeof val === 'string') {
-      const num = BigInt(val)
-      return isNaN(Number(num)) ? null : num
-    }
-  } catch (e) {
-    console.warn('Error extracting u128:', e)
+// Helper to extract u128 from ScVal (matching test.js)
+function extractU128(scVal: any): bigint | null {
+  if (scVal && scVal.u128) {
+    const lo = scVal.u128.lo || 0
+    const hi = scVal.u128.hi || 0
+    return BigInt(lo) + (BigInt(hi) << 64n)
   }
-  
-  return null
-}
-
-// Helper to extract string from ScVal
-function extractString(val: any): string | null {
-  if (!val) return null
-  
+  if (scVal && typeof scVal === 'object' && 'value' in scVal) {
+    return BigInt(scVal.value || 0)
+  }
+  if (typeof scVal === 'number' || typeof scVal === 'string') {
+    return BigInt(scVal)
+  }
+  // Try scValToNative for u128
   try {
-    // Try scValToNative from SDK
     const { scValToNative } = StellarSdk as any
-    if (scValToNative && typeof scValToNative === 'function') {
-      try {
-        const native = scValToNative(val)
-        if (typeof native === 'string') return native
-      } catch (e) {
-        // Continue to other methods
+    if (scValToNative) {
+      const native = scValToNative(scVal)
+      if (typeof native === 'bigint' || typeof native === 'number') {
+        return BigInt(native)
       }
-    }
-    
-    // Handle ScVal object format
-    if (typeof val === 'object') {
-      if (val._arm === 'string' && val._value) {
-        return val._value.toString()
-      }
-      if ('string' in val) {
-        return val.string.toString()
-      }
-    }
-    
-    if (typeof val === 'string') return val
-    if (val && typeof val.toString === 'function') {
-      return val.toString()
     }
   } catch (e) {
-    console.warn('Error extracting string:', e)
+    // Ignore
   }
-  
   return null
 }
 
-// Helper to extract bool from ScVal
-function extractBool(val: any): boolean | null {
-  if (!val) return null
-  
+// Helper to extract string from ScVal (matching test.js)
+function extractString(scVal: any): string | null {
+  if (scVal && scVal.str) return scVal.str
+  if (scVal && typeof scVal === 'string') return scVal
+  // Try scValToNative
   try {
-    // Handle ScVal object format
-    if (typeof val === 'object') {
-      if (val._arm === 'bool') {
-        return val._value === true || val._value === 1
-      }
-      if ('bool' in val) {
-        return val.bool === true || val.bool === 1
-      }
+    const { scValToNative } = StellarSdk as any
+    if (scValToNative) {
+      const native = scValToNative(scVal)
+      if (typeof native === 'string') return native
     }
-    
-    if (typeof val === 'boolean') return val
-    if (val === 1 || val === 'true' || val === true) return true
-    if (val === 0 || val === 'false' || val === false) return false
   } catch (e) {
-    console.warn('Error extracting bool:', e)
+    // Ignore
   }
-  
   return null
 }
 
-// Read from achievement contract
-async function readAchievementContract(
-  methodName: string,
-  params: any[] = [],
-  sourceAccount: string
-): Promise<any> {
+// Read function (view only) - matching test.js
+async function readContract(contract: Contract, methodName: string, params: any[] = [], sourceAccount: string): Promise<any> {
   try {
     const server = getServer()
-    const contract = getAchievementContract()
-    
     const account = await server.getAccount(sourceAccount)
     
     const builtTransaction = new StellarSdk.TransactionBuilder(account, {
@@ -162,15 +93,14 @@ async function readAchievementContract(
     
     const simulation = await server.simulateTransaction(builtTransaction)
     
-    if (simulation.error) {
-      const errorMessage = simulation.error?.message || ''
-      const isNotFoundError = errorMessage.includes('UnreachableCodeReached') || 
-                             errorMessage.includes('InvalidAction') ||
-                             errorMessage.includes('WasmVm')
-      
-      if (!isNotFoundError) {
-        console.error(`Achievement contract read failed for ${methodName}:`, simulation.error)
-      }
+    // Handle different API versions (matching test.js)
+    const SorobanRpc = (StellarSdk as any).SorobanRpc || (StellarSdk as any).rpc || StellarSdk
+    const isError = SorobanRpc.Api?.isSimulationError 
+      ? SorobanRpc.Api.isSimulationError(simulation)
+      : simulation.error !== undefined
+    
+    if (isError) {
+      console.error(`   ❌ Read failed for ${methodName}:`, simulation.error)
       return null
     }
     
@@ -180,7 +110,57 @@ async function readAchievementContract(
     
     return null
   } catch (error) {
-    console.error(`Error reading achievement contract ${methodName}:`, error)
+    console.error(`   ❌ Error reading ${methodName}:`, error)
+    return null
+  }
+}
+
+// Get achievement details by ID (matching test.js)
+async function getAchievementDetails(achievementId: number, userAddress: string): Promise<any> {
+  try {
+    const contract = getAchievementContract()
+    const achIdVal = StellarSdk.nativeToScVal(achievementId, { type: 'u128' })
+    const achDetails = await readContract(contract, 'get_achievement_details', [achIdVal], userAddress)
+    
+    if (!achDetails) {
+      return null
+    }
+    
+    // Try using SDK's scValToNative (matching test.js)
+    try {
+      const { scValToNative } = StellarSdk as any
+      if (scValToNative) {
+        const native = scValToNative(achDetails)
+        if (native && typeof native === 'object') {
+          return {
+            id: native.id?.toString() || achievementId.toString(),
+            name: native.name || 'Unknown',
+            description: native.description || 'Unknown',
+            rarity: native.rarity || 'Unknown',
+            icon: native.icon || 'Unknown',
+            total_earned: native.total_earned?.toString() || '0',
+          }
+        }
+      }
+    } catch (e) {
+      // Fall through to manual parsing
+    }
+    
+    // Manual parsing fallback (matching test.js)
+    if (Array.isArray(achDetails) && achDetails.length >= 6) {
+      return {
+        id: extractU128(achDetails[0])?.toString() || achievementId.toString(),
+        name: extractString(achDetails[1]) || 'Unknown',
+        description: extractString(achDetails[2]) || 'Unknown',
+        rarity: extractString(achDetails[3]) || 'Unknown',
+        icon: extractString(achDetails[4]) || 'Unknown',
+        total_earned: extractU128(achDetails[5])?.toString() || '0',
+      }
+    }
+    
+    return null
+  } catch (error) {
+    console.error(`   ❌ Error getting achievement ${achievementId}:`, error)
     return null
   }
 }
@@ -192,193 +172,99 @@ export interface Achievement {
   rarity: string
   icon: string
   totalEarned: number
-  earned: boolean
-}
-
-export interface PetAchievements {
-  petId: number
-  achievements: Achievement[]
-  totalCount: number
-}
-
-/**
- * Get all available achievements
- */
-export async function getAllAchievements(userAddress: string): Promise<Achievement[]> {
-  try {
-    const result = await readAchievementContract('get_all_achievements', [], userAddress)
-    
-    if (!result || !Array.isArray(result)) {
-      return []
-    }
-    
-    const achievements: Achievement[] = []
-    
-    for (const ach of result) {
-      if (ach && Array.isArray(ach) && ach.length >= 2) {
-        const id = extractU128(ach[0])
-        const name = extractString(ach[1])
-        
-        if (id !== null && name !== null) {
-          // Get full details for this achievement
-          const details = await getAchievementDetails(Number(id), userAddress)
-          if (details) {
-            achievements.push(details)
-          }
-        }
-      }
-    }
-    
-    return achievements
-  } catch (error) {
-    console.error('Error getting all achievements:', error)
-    return []
-  }
-}
-
-/**
- * Get achievement details by ID
- */
-export async function getAchievementDetails(achievementId: number, userAddress: string): Promise<Achievement | null> {
-  try {
-    const achIdVal = StellarSdk.nativeToScVal(achievementId, { type: 'u128' })
-    const result = await readAchievementContract('get_achievement_details', [achIdVal], userAddress)
-    
-    if (!result || !Array.isArray(result) || result.length < 6) {
-      return null
-    }
-    
-    const id = extractU128(result[0])
-    const name = extractString(result[1])
-    const description = extractString(result[2])
-    const rarity = extractString(result[3])
-    const icon = extractString(result[4])
-    const totalEarned = extractU128(result[5])
-    
-    // Check if user has earned this achievement
-    const callerAddr = new StellarSdk.Address(userAddress).toScVal()
-    const hasEarnedResult = await readAchievementContract('has_earned', [callerAddr, achIdVal], userAddress)
-    const earned = extractBool(hasEarnedResult) || false
-    
-    if (id === null || name === null) {
-      return null
-    }
-    
-    return {
-      id: Number(id),
-      name: name || 'Unknown Achievement',
-      description: description || '',
-      rarity: rarity || 'common',
-      icon: icon || '🏆',
-      totalEarned: totalEarned ? Number(totalEarned) : 0,
-      earned,
-    }
-  } catch (error) {
-    console.error('Error getting achievement details:', error)
-    return null
-  }
+  earned: boolean // Always true for getUserAchievements
 }
 
 /**
  * Get user's achievements
+ * Uses the exact same logic as getUserAchievements.js
  */
 export async function getUserAchievements(userAddress: string): Promise<Achievement[]> {
   try {
-    const callerAddr = new StellarSdk.Address(userAddress).toScVal()
-    const result = await readAchievementContract('get_user_achievements', [callerAddr], userAddress)
+    const contract = getAchievementContract()
     
-    if (!result || !Array.isArray(result)) {
+    // Convert user address to Address ScVal (matching test.js)
+    const userAddr = new StellarSdk.Address(userAddress)
+    const userAddrVal = userAddr.toScVal()
+    
+    // 1. Get list of achievement IDs for the user (matching test.js)
+    console.log('📤 Fetching user achievements...')
+    const userAchievements = await readContract(contract, 'get_user_achievements', [userAddrVal], userAddress)
+    
+    if (!userAchievements) {
+      console.log('❌ Failed to retrieve user achievements')
       return []
     }
-    
-    const achievementIds: number[] = []
-    
-    for (const ach of result) {
-      const id = extractU128(ach)
-      if (id !== null) {
-        achievementIds.push(Number(id))
-      }
-    }
-    
-    // Get details for each achievement
-    const achievements = await Promise.all(
-      achievementIds.map(id => getAchievementDetails(id, userAddress))
-    )
-    
-    return achievements.filter((ach): ach is Achievement => ach !== null)
-  } catch (error) {
-    console.error('Error getting user achievements:', error)
-    return []
-  }
-}
 
-/**
- * Get pet-specific achievements
- */
-export async function getPetAchievements(petId: number, userAddress: string): Promise<PetAchievements> {
-  try {
-    const petIdVal = StellarSdk.nativeToScVal(petId, { type: 'u128' })
-    const result = await readAchievementContract('get_pet_achievements', [petIdVal], userAddress)
-    
-    if (!result || !Array.isArray(result)) {
-      return {
-        petId,
-        achievements: [],
-        totalCount: 0,
+    // Parse the vector of achievement IDs (matching test.js exactly)
+    let achievementIds: number[] = []
+    try {
+      const { scValToNative } = StellarSdk as any
+      if (scValToNative) {
+        const native = scValToNative(userAchievements)
+        if (Array.isArray(native)) {
+          achievementIds = native
+            .map((id: any) => {
+              if (typeof id === 'bigint') return Number(id)
+              if (typeof id === 'number') return id
+              const extracted = extractU128(id)
+              return extracted ? Number(extracted) : null
+            })
+            .filter((id: any): id is number => id !== null)
+        }
+      }
+    } catch (e) {
+      // Fallback: manual parsing (matching test.js)
+      if (userAchievements && userAchievements._arm === 'vec' && Array.isArray(userAchievements._value)) {
+        achievementIds = userAchievements._value
+          .map((ach: any) => {
+            const id = extractU128(ach)
+            return id ? Number(id) : null
+          })
+          .filter((id: any): id is number => id !== null)
+      } else if (Array.isArray(userAchievements)) {
+        achievementIds = userAchievements
+          .map((ach: any) => {
+            const id = extractU128(ach)
+            return id ? Number(id) : null
+          })
+          .filter((id: any): id is number => id !== null)
       }
     }
-    
-    const achievementIds: number[] = []
-    
-    for (const ach of result) {
-      const id = extractU128(ach)
-      if (id !== null) {
-        achievementIds.push(Number(id))
-      }
-    }
-    
-    // Get details for each achievement
-    const achievements = await Promise.all(
-      achievementIds.map(id => getAchievementDetails(id, userAddress))
-    )
-    
-    const validAchievements = achievements.filter((ach): ach is Achievement => ach !== null)
-    
-    return {
-      petId,
-      achievements: validAchievements,
-      totalCount: validAchievements.length,
-    }
-  } catch (error) {
-    console.error('Error getting pet achievements:', error)
-    return {
-      petId,
-      achievements: [],
-      totalCount: 0,
-    }
-  }
-}
 
-/**
- * Get all achievements with earned status for a pet
- * This combines all achievements with their earned status
- */
-export async function getAllAchievementsWithStatus(petId: number, userAddress: string): Promise<Achievement[]> {
-  try {
-    // Get all available achievements
-    const allAchievements = await getAllAchievements(userAddress)
-    
-    // Get pet's earned achievements
-    const petAchievements = await getPetAchievements(petId, userAddress)
-    const earnedIds = new Set(petAchievements.achievements.map(a => a.id))
-    
-    // Mark which achievements are earned
-    return allAchievements.map(ach => ({
-      ...ach,
-      earned: earnedIds.has(ach.id),
-    }))
+    if (achievementIds.length === 0) {
+      console.log('ℹ️  This user has not earned any achievements yet.')
+      return []
+    }
+
+    console.log(`✅ User has earned ${achievementIds.length} achievement(s):`, achievementIds)
+
+    const achievementsData: Achievement[] = []
+
+    // 2. Get details for each achievement (matching test.js)
+    for (let i = 0; i < achievementIds.length; i++) {
+      const achId = achievementIds[i]
+      const achievement = await getAchievementDetails(achId, userAddress)
+      
+      if (achievement) {
+        achievementsData.push({
+          id: Number(achievement.id),
+          name: achievement.name,
+          description: achievement.description,
+          rarity: achievement.rarity,
+          icon: achievement.icon,
+          totalEarned: Number(achievement.total_earned) || 0,
+          earned: true, // All achievements from getUserAchievements are earned
+        })
+      } else {
+        console.log(`⚠️  Achievement ID ${achId}: Could not retrieve details`)
+      }
+    }
+
+    console.log(`✅ Successfully loaded ${achievementsData.length} achievement details`)
+    return achievementsData
   } catch (error) {
-    console.error('Error getting all achievements with status:', error)
+    console.error('❌ Error getting user achievements:', error)
     return []
   }
 }
